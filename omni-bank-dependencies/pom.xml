@@ -1,0 +1,191 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <groupId>com.omnibank</groupId>
+    <artifactId>omni-bank-dependencies</artifactId>
+    <version>1.0.0-SNAPSHOT</version>
+    <packaging>pom</packaging>
+
+    <name>omni-bank-dependencies</name>
+    <description>omni-bank 基础 BOM：统一管理全项目依赖版本。刻意不声明 parent，保证可被任意工程以 import 方式引入。可独立发布到私服。</description>
+
+    <properties>
+        <!-- JDK 基线（仅作说明；编译配置由 omni-bank-parent 统一管理） -->
+        <java.version>21</java.version>
+        <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+        <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
+
+        <!-- ==================== 核心框架版本（三者需整体核对兼容矩阵，禁止单独升级） ==================== -->
+        <!-- Spring Boot 3.5.x 线最新 patch；与 omni-bank-parent 中 spring-boot-starter-parent 版本保持一致 -->
+        <spring-boot.version>3.5.16</spring-boot.version>
+        <!-- Spring Cloud 2025.0.x 线（对应 Boot 3.5.x）最新 patch -->
+        <spring-cloud.version>2025.0.3</spring-cloud.version>
+        <!-- Spring Cloud Alibaba（对应 Cloud 2025.0.x / Boot 3.5.x）：内置 Nacos / Sentinel 1.8.9 / Seata 2.5.0 / RocketMQ 5.3.1 客户端管理 -->
+        <spring-cloud-alibaba.version>2025.0.0.0</spring-cloud-alibaba.version>
+
+        <!-- ==================== 三方库版本 ==================== -->
+        <lombok.version>1.18.48</lombok.version>
+        <!-- MapStruct 取稳定版 1.6.3（1.7.0 仍为 Beta，暂不采用） -->
+        <mapstruct.version>1.6.3</mapstruct.version>
+        <!-- 解决 Lombok 与 MapStruct 注解处理器执行顺序冲突 -->
+        <lombok-mapstruct-binding.version>0.2.0</lombok-mapstruct-binding.version>
+        <hutool.version>5.8.48</hutool.version>
+        <!-- Redisson 3.x 末版（明确适配 Boot 3.x；4.x 线面向 Boot 4，升级 Boot 时再评估） -->
+        <redisson.version>3.52.0</redisson.version>
+        <!-- MyBatis-Plus：Boot3 专用 starter；3.5.9+ 起分页插件依赖拆分，需配合 mybatis-plus-jsqlparser -->
+        <mybatis-plus.version>3.5.17</mybatis-plus.version>
+        <jjwt.version>0.13.0</jjwt.version>
+        <knife4j.version>4.5.0</knife4j.version>
+        <rocketmq-spring.version>2.3.6</rocketmq-spring.version>
+        <transmittable-thread-local.version>2.14.5</transmittable-thread-local.version>
+        <easyexcel.version>4.0.3</easyexcel.version>
+        <!-- ShardingSphere 5.5.x 已移除 spring-boot-starter，按 JDBC 模式使用（驱动型接入，与 Boot 版本解耦） -->
+        <shardingsphere-jdbc.version>5.5.3</shardingsphere-jdbc.version>
+
+        <!-- ==================== 私服地址（属性占位，可用 -D 或 settings.xml 覆盖） ==================== -->
+        <omni.repo.release.url>http://nexus.example.com/repository/maven-releases/</omni.repo.release.url>
+        <omni.repo.snapshot.url>http://nexus.example.com/repository/maven-snapshots/</omni.repo.snapshot.url>
+    </properties>
+
+    <dependencyManagement>
+        <dependencies>
+            <!-- ==================== 官方 BOM（import 顺序即优先级，先声明者优先） ==================== -->
+            <!-- Spring Boot 官方 BOM：管理 Spring 全家桶及 JDBC 驱动、Jackson、JUnit 等常用三方 -->
+            <dependency>
+                <groupId>org.springframework.boot</groupId>
+                <artifactId>spring-boot-dependencies</artifactId>
+                <version>${spring-boot.version}</version>
+                <type>pom</type>
+                <scope>import</scope>
+            </dependency>
+            <!-- Spring Cloud BOM：Gateway / OpenFeign / LoadBalancer 等 -->
+            <dependency>
+                <groupId>org.springframework.cloud</groupId>
+                <artifactId>spring-cloud-dependencies</artifactId>
+                <version>${spring-cloud.version}</version>
+                <type>pom</type>
+                <scope>import</scope>
+            </dependency>
+            <!-- Spring Cloud Alibaba BOM：Nacos Discovery/Config、Sentinel、Seata 等客户端版本 -->
+            <dependency>
+                <groupId>com.alibaba.cloud</groupId>
+                <artifactId>spring-cloud-alibaba-dependencies</artifactId>
+                <version>${spring-cloud-alibaba.version}</version>
+                <type>pom</type>
+                <scope>import</scope>
+            </dependency>
+
+            <!-- ==================== 工具链 ==================== -->
+            <dependency>
+                <groupId>org.projectlombok</groupId>
+                <artifactId>lombok</artifactId>
+                <version>${lombok.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>org.projectlombok</groupId>
+                <artifactId>lombok-mapstruct-binding</artifactId>
+                <version>${lombok-mapstruct-binding.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>org.mapstruct</groupId>
+                <artifactId>mapstruct</artifactId>
+                <version>${mapstruct.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>org.mapstruct</groupId>
+                <artifactId>mapstruct-processor</artifactId>
+                <version>${mapstruct.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>cn.hutool</groupId>
+                <artifactId>hutool-all</artifactId>
+                <version>${hutool.version}</version>
+            </dependency>
+
+            <!-- ==================== 数据访问 / 缓存 ==================== -->
+            <dependency>
+                <groupId>com.baomidou</groupId>
+                <artifactId>mybatis-plus-spring-boot3-starter</artifactId>
+                <version>${mybatis-plus.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>com.baomidou</groupId>
+                <artifactId>mybatis-plus-jsqlparser</artifactId>
+                <version>${mybatis-plus.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>org.redisson</groupId>
+                <artifactId>redisson-spring-boot-starter</artifactId>
+                <version>${redisson.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>org.apache.shardingsphere</groupId>
+                <artifactId>shardingsphere-jdbc</artifactId>
+                <version>${shardingsphere-jdbc.version}</version>
+            </dependency>
+
+            <!-- ==================== 认证 / 文档 / 消息 ==================== -->
+            <dependency>
+                <groupId>io.jsonwebtoken</groupId>
+                <artifactId>jjwt-api</artifactId>
+                <version>${jjwt.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>io.jsonwebtoken</groupId>
+                <artifactId>jjwt-impl</artifactId>
+                <version>${jjwt.version}</version>
+                <scope>runtime</scope>
+            </dependency>
+            <dependency>
+                <groupId>io.jsonwebtoken</groupId>
+                <artifactId>jjwt-jackson</artifactId>
+                <version>${jjwt.version}</version>
+                <scope>runtime</scope>
+            </dependency>
+            <dependency>
+                <groupId>com.github.xiaoymin</groupId>
+                <artifactId>knife4j-openapi3-jakarta-spring-boot-starter</artifactId>
+                <version>${knife4j.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>org.apache.rocketmq</groupId>
+                <artifactId>rocketmq-spring-boot-starter</artifactId>
+                <version>${rocketmq-spring.version}</version>
+            </dependency>
+
+            <!-- ==================== 其他基础库 ==================== -->
+            <!-- 线程池上下文传递（TTL）：配合 SCA 生态的线程池/异步场景 -->
+            <dependency>
+                <groupId>com.alibaba</groupId>
+                <artifactId>transmittable-thread-local</artifactId>
+                <version>${transmittable-thread-local.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>com.alibaba</groupId>
+                <artifactId>easyexcel</artifactId>
+                <version>${easyexcel.version}</version>
+            </dependency>
+        </dependencies>
+    </dependencyManagement>
+
+    <!--
+        私服发布地址（属性占位）：默认值为占位地址，实际发布时二选一覆盖：
+        1. 命令行：mvn deploy -Domni.repo.release.url=... -Domni.repo.snapshot.url=...
+        2. settings.xml 中定义同名 property
+    -->
+    <distributionManagement>
+        <repository>
+            <id>omni-release</id>
+            <name>Omni Bank Release Repository</name>
+            <url>${omni.repo.release.url}</url>
+        </repository>
+        <snapshotRepository>
+            <id>omni-snapshot</id>
+            <name>Omni Bank Snapshot Repository</name>
+            <url>${omni.repo.snapshot.url}</url>
+        </snapshotRepository>
+    </distributionManagement>
+</project>

@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <!--
+        公共组件聚合模块：仅聚合，业务服务不直接依赖本模块，按需引用各子模块。
+        注意：parent 必须显式 relativePath（默认 ../pom.xml 会指向聚合根，导致解析失败）。
+    -->
+    <parent>
+        <groupId>com.omnibank</groupId>
+        <artifactId>omni-bank-parent</artifactId>
+        <version>1.0.0-SNAPSHOT</version>
+        <relativePath>../omni-bank-parent</relativePath>
+    </parent>
+
+    <artifactId>omni-bank-common</artifactId>
+    <packaging>pom</packaging>
+
+    <name>omni-bank-common</name>
+    <description>omni-bank 公共组件聚合模块：core 统一返回体与异常体系、web 全局异常处理、mybatis 数据访问支撑、local/remote 缓存、mq 消息、idempotent 幂等、lock 分布式锁、excel 导入导出。后续新组件以子模块形式扩展。</description>
+
+    <modules>
+        <module>omni-bank-common-core</module>
+        <module>omni-bank-common-web</module>
+        <module>omni-bank-common-mybatis</module>
+        <module>omni-bank-common-local-cache</module>
+        <module>omni-bank-common-remote-cache</module>
+        <module>omni-bank-common-mq</module>
+        <module>omni-bank-common-idempotent</module>
+        <module>omni-bank-common-lock</module>
+        <module>omni-bank-common-excel</module>
+    </modules>
+</project>

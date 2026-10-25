@@ -1,0 +1,152 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <!--
+        注意：升级 Spring Boot 时，此处 spring-boot-starter-parent 版本
+        必须与 omni-bank-dependencies 中 spring-boot.version 属性同步修改
+    -->
+    <parent>
+        <groupId>org.springframework.boot</groupId>
+        <artifactId>spring-boot-starter-parent</artifactId>
+        <version>3.5.16</version>
+        <relativePath/>
+    </parent>
+
+    <groupId>com.omnibank</groupId>
+    <artifactId>omni-bank-parent</artifactId>
+    <version>1.0.0-SNAPSHOT</version>
+    <packaging>pom</packaging>
+
+    <name>omni-bank-parent</name>
+    <description>omni-bank 父 POM：所有业务模块的 parent，与 omni-bank-dependencies 平级（同为 omni-bank 聚合根的子模块）。可独立发布到私服。</description>
+
+    <properties>
+        <!-- 基础环境（子模块继承） -->
+        <java.version>21</java.version>
+        <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+        <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
+
+        <!-- 本项目坐标版本：后续业务模块互相依赖时引用该属性，与 project.version 保持一致 -->
+        <omni-bank.version>1.0.0-SNAPSHOT</omni-bank.version>
+
+        <!-- ==================== 私服地址（属性占位，可用 -D 或 settings.xml 覆盖） ==================== -->
+        <omni.repo.release.url>http://nexus.example.com/repository/maven-releases/</omni.repo.release.url>
+        <omni.repo.snapshot.url>http://nexus.example.com/repository/maven-snapshots/</omni.repo.snapshot.url>
+    </properties>
+
+    <!-- 项目唯一版本来源：所有依赖版本一律在本 BOM 中声明，子模块引用时不写版本号 -->
+    <dependencyManagement>
+        <dependencies>
+            <dependency>
+                <groupId>com.omnibank</groupId>
+                <artifactId>omni-bank-dependencies</artifactId>
+                <version>${omni-bank.version}</version>
+                <type>pom</type>
+                <scope>import</scope>
+            </dependency>
+
+            <!-- ==================== 项目内部构件（版本统一由 omni-bank.version 管理） ==================== -->
+            <dependency>
+                <groupId>com.omnibank</groupId>
+                <artifactId>omni-bank-common-core</artifactId>
+                <version>${omni-bank.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>com.omnibank</groupId>
+                <artifactId>omni-bank-common-web</artifactId>
+                <version>${omni-bank.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>com.omnibank</groupId>
+                <artifactId>omni-bank-common-mybatis</artifactId>
+                <version>${omni-bank.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>com.omnibank</groupId>
+                <artifactId>omni-bank-common-local-cache</artifactId>
+                <version>${omni-bank.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>com.omnibank</groupId>
+                <artifactId>omni-bank-common-remote-cache</artifactId>
+                <version>${omni-bank.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>com.omnibank</groupId>
+                <artifactId>omni-bank-common-mq</artifactId>
+                <version>${omni-bank.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>com.omnibank</groupId>
+                <artifactId>omni-bank-common-idempotent</artifactId>
+                <version>${omni-bank.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>com.omnibank</groupId>
+                <artifactId>omni-bank-common-lock</artifactId>
+                <version>${omni-bank.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>com.omnibank</groupId>
+                <artifactId>omni-bank-common-excel</artifactId>
+                <version>${omni-bank.version}</version>
+            </dependency>
+        </dependencies>
+    </dependencyManagement>
+
+    <build>
+        <pluginManagement>
+            <plugins>
+                <!--
+                    JDK 21 下显式声明注解处理器，保证 Lombok / MapStruct 组合开箱即用。
+                    版本号在此与 omni-bank-dependencies 中的属性保持同步（import 的 BOM 不会传递属性）。
+                    需要额外注解处理器（如 spring-boot-configuration-processor）的模块，在本模块中覆盖并追加。
+                -->
+                <plugin>
+                    <groupId>org.apache.maven.plugins</groupId>
+                    <artifactId>maven-compiler-plugin</artifactId>
+                    <configuration>
+                        <annotationProcessorPaths>
+                            <path>
+                                <groupId>org.projectlombok</groupId>
+                                <artifactId>lombok</artifactId>
+                                <version>1.18.48</version>
+                            </path>
+                            <path>
+                                <groupId>org.mapstruct</groupId>
+                                <artifactId>mapstruct-processor</artifactId>
+                                <version>1.6.3</version>
+                            </path>
+                            <path>
+                                <groupId>org.projectlombok</groupId>
+                                <artifactId>lombok-mapstruct-binding</artifactId>
+                                <version>0.2.0</version>
+                            </path>
+                        </annotationProcessorPaths>
+                    </configuration>
+                </plugin>
+            </plugins>
+        </pluginManagement>
+    </build>
+
+    <!--
+        私服发布地址（属性占位）：默认值为占位地址，实际发布时二选一覆盖：
+        1. 命令行：mvn deploy -Domni.repo.release.url=... -Domni.repo.snapshot.url=...
+        2. settings.xml 中定义同名 property
+    -->
+    <distributionManagement>
+        <repository>
+            <id>omni-release</id>
+            <name>Omni Bank Release Repository</name>
+            <url>${omni.repo.release.url}</url>
+        </repository>
+        <snapshotRepository>
+            <id>omni-snapshot</id>
+            <name>Omni Bank Snapshot Repository</name>
+            <url>${omni.repo.snapshot.url}</url>
+        </snapshotRepository>
+    </distributionManagement>
+</project>

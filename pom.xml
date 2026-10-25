@@ -1,0 +1,56 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <!--
+        omni-bank 聚合根：仅负责聚合构建，不承载依赖管理 / 插件配置 / 公共属性。
+        版本管理 → omni-bank-dependencies；父 POM 职责 → omni-bank-parent。
+
+        后续新增业务模块（如 omni-bank-common）时：
+        1. 在本聚合根 <modules> 中登记子目录
+        2. 模块 POM 以 omni-bank-parent 为 parent 时，禁止使用默认 relativePath
+           （默认 ../pom.xml 会指向本聚合根，导致 parent 解析失败），
+           必须显式声明：<relativePath>../omni-bank-parent</relativePath> 或 <relativePath/>
+    -->
+    <groupId>com.omnibank</groupId>
+    <artifactId>omni-bank</artifactId>
+    <version>1.0.0-SNAPSHOT</version>
+    <packaging>pom</packaging>
+
+    <name>omni-bank</name>
+    <description>omni-bank 聚合根：聚合 omni-bank-parent 与 omni-bank-dependencies 及后续业务模块。</description>
+
+    <modules>
+        <module>omni-bank-dependencies</module>
+        <module>omni-bank-parent</module>
+        <module>omni-bank-common</module>
+    </modules>
+
+    <properties>
+        <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+        <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
+
+        <!-- ==================== 私服地址（属性占位，可用 -D 或 settings.xml 覆盖） ==================== -->
+        <omni.repo.release.url>http://nexus.example.com/repository/maven-releases/</omni.repo.release.url>
+        <omni.repo.snapshot.url>http://nexus.example.com/repository/maven-snapshots/</omni.repo.snapshot.url>
+    </properties>
+
+    <!--
+        私服发布地址（属性占位）：保证在聚合根执行 mvn deploy 时三个 POM 均可正常发布。
+        实际发布时通过 -Domni.repo.release.url=... 或 settings.xml 注入真实地址。
+    -->
+    <distributionManagement>
+        <repository>
+            <id>omni-release</id>
+            <name>Omni Bank Release Repository</name>
+            <url>${omni.repo.release.url}</url>
+        </repository>
+        <snapshotRepository>
+            <id>omni-snapshot</id>
+            <name>Omni Bank Snapshot Repository</name>
+            <url>${omni.repo.snapshot.url}</url>
+        </snapshotRepository>
+    </distributionManagement>
+</project>

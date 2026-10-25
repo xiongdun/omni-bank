@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <parent>
+        <groupId>com.omnibank</groupId>
+        <artifactId>omni-bank-common</artifactId>
+        <version>1.0.0-SNAPSHOT</version>
+    </parent>
+
+    <artifactId>omni-bank-common-lock</artifactId>
+
+    <name>omni-bank-common-lock</name>
+    <description>分布式锁：注解 + 切面，基于 Redisson RLock，适用于并发扣减/防并发重复处理等场景。依赖 remote-cache 提供的 Redisson。</description>
+
+    <dependencies>
+        <dependency>
+            <groupId>com.omnibank</groupId>
+            <artifactId>omni-bank-common-core</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>com.omnibank</groupId>
+            <artifactId>omni-bank-common-remote-cache</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-aop</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.projectlombok</groupId>
+            <artifactId>lombok</artifactId>
+            <optional>true</optional>
+        </dependency>
+    </dependencies>
+</project>
