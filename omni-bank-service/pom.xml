@@ -29,5 +29,6 @@
         <module>omni-bank-service-payment</module>
         <module>omni-bank-service-recon</module>
         <module>omni-bank-service-risk</module>
+        <module>omni-bank-service-system</module>
     </modules>
 </project>

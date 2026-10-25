@@ -96,6 +96,11 @@
             </dependency>
             <dependency>
                 <groupId>com.omnibank</groupId>
+                <artifactId>omni-bank-common-threadpool</artifactId>
+                <version>${omni-bank.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>com.omnibank</groupId>
                 <artifactId>omni-bank-service-customer-api</artifactId>
                 <version>${omni-bank.version}</version>
             </dependency>
@@ -127,6 +132,11 @@
             <dependency>
                 <groupId>com.omnibank</groupId>
                 <artifactId>omni-bank-service-risk-api</artifactId>
+                <version>${omni-bank.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>com.omnibank</groupId>
+                <artifactId>omni-bank-service-system-api</artifactId>
                 <version>${omni-bank.version}</version>
             </dependency>
         </dependencies>

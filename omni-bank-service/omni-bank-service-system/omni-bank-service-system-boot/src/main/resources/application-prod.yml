@@ -1,0 +1,26 @@
+# 生产/联调环境：注册发现、Dubbo 注册、数据源均由环境变量注入
+spring:
+  datasource:
+    driver-class-name: com.mysql.cj.jdbc.Driver
+    url: ${MYSQL_URL:jdbc:mysql://127.0.0.1:3306/omni_bank?useUnicode=true&characterEncoding=utf8&serverTimezone=Asia/Shanghai&useSSL=false}
+    username: ${MYSQL_USERNAME:root}
+    password: ${MYSQL_PASSWORD:}
+    hikari:
+      minimum-idle: 5
+      maximum-pool-size: 20
+  cloud:
+    nacos:
+      discovery:
+        enabled: ${NACOS_ENABLED:true}
+        server-addr: ${NACOS_SERVER_ADDR:127.0.0.1:8848}
+
+dubbo:
+  registry:
+    address: ${DUBBO_REGISTRY_ADDRESS:nacos://127.0.0.1:8848}
+
+omni:
+  thread-pool:
+    core-pool-size: ${THREAD_POOL_CORE:8}
+    max-pool-size: ${THREAD_POOL_MAX:16}
+    queue-capacity: ${THREAD_POOL_QUEUE:200}
+    thread-name-prefix: system-

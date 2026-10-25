@@ -29,6 +29,8 @@
         <dubbo.version>3.3.6</dubbo.version>
         <!-- ArchUnit：架构守护测试（固化模块边界），使用原生 API + JUnit5 原生 @Test -->
         <archunit.version>1.5.1</archunit.version>
+        <!-- Sa-Token：认证鉴权（登录/token/权限/会话） -->
+        <sa-token.version>1.46.0</sa-token.version>
 
         <!-- ==================== 三方库版本 ==================== -->
         <lombok.version>1.18.48</lombok.version>
@@ -121,6 +123,12 @@
                 <groupId>com.tngtech.archunit</groupId>
                 <artifactId>archunit</artifactId>
                 <version>${archunit.version}</version>
+            </dependency>
+            <!-- Sa-Token：认证鉴权（Boot3 专用 starter） -->
+            <dependency>
+                <groupId>cn.dev33</groupId>
+                <artifactId>sa-token-spring-boot3-starter</artifactId>
+                <version>${sa-token.version}</version>
             </dependency>
 
             <!-- ==================== 数据访问 / 缓存 ==================== -->

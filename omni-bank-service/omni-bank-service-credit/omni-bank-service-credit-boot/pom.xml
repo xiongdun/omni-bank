@@ -65,6 +65,22 @@
             <groupId>com.omnibank</groupId>
             <artifactId>omni-bank-common-web</artifactId>
         </dependency>
+        <!-- 数据访问：MyBatis-Plus 支撑（分页插件/审计填充/实体基类） -->
+        <dependency>
+            <groupId>com.omnibank</groupId>
+            <artifactId>omni-bank-common-mybatis</artifactId>
+        </dependency>
+        <!-- 统一业务线程池（TTL 上下文装饰/优雅关闭，自动装配） -->
+        <dependency>
+            <groupId>com.omnibank</groupId>
+            <artifactId>omni-bank-common-threadpool</artifactId>
+        </dependency>
+        <!-- MySQL 驱动（Boot BOM 管理版本） -->
+        <dependency>
+            <groupId>com.mysql</groupId>
+            <artifactId>mysql-connector-j</artifactId>
+            <scope>runtime</scope>
+        </dependency>
         <!-- 探活统一走 /actuator/health（liveness/readiness），替代手写 ping 接口 -->
         <dependency>
             <groupId>org.springframework.boot</groupId>

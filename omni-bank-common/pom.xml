@@ -31,5 +31,6 @@
         <module>omni-bank-common-idempotent</module>
         <module>omni-bank-common-lock</module>
         <module>omni-bank-common-excel</module>
+        <module>omni-bank-common-threadpool</module>
     </modules>
 </project>

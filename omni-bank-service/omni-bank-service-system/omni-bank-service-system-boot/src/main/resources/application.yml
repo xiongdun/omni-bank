@@ -1,0 +1,39 @@
+server:
+  port: 8104
+
+spring:
+  application:
+    name: omni-bank-service-system
+  profiles:
+    # 环境通过 SPRING_PROFILES_ACTIVE 注入（local / prod），缺省 local
+    active: ${SPRING_PROFILES_ACTIVE:local}
+
+# Sa-Token 认证鉴权：管理端经 Header 传 token
+sa-token:
+  token-name: Authorization
+  # token 有效期 8 小时
+  timeout: 28800
+  # 不启用无操作临时过期（如需开启改为秒数）
+  active-timeout: -1
+  # 允许同一账号并发登录
+  is-concurrent: true
+  token-style: uuid
+  is-read-cookie: false
+  is-print: false
+
+# Dubbo RPC（triple 协议）：服务间调用；注册中心地址在 profile 中按环境配置
+dubbo:
+  application:
+    name: ${spring.application.name}
+  registry:
+    register-mode: instance
+    check: false
+  protocol:
+    name: tri
+    port: 20884
+  consumer:
+    check: false
+
+# TODO 中间件接入清单：
+#  - 操作日志/登录日志异步落库：经统一业务线程池（已引 omni-bank-common-threadpool）
+#  - 文件/附件：对接 MinIO（预留）

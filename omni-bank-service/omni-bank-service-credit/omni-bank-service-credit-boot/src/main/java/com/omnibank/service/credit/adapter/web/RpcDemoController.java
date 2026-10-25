@@ -21,7 +21,9 @@ public class RpcDemoController {
 
     private final CustomerGateway customerGateway;
 
-    /** 验证 Dubbo 链路：网关 /api/credit/rpc-ping → credit →（Dubbo）→ customer */
+    /**
+     * 验证 Dubbo 链路：网关 /api/credit/rpc-ping → credit →（Dubbo）→ customer
+     */
     @GetMapping("/rpc-ping")
     public Result<String> rpcPing() {
         return Result.success("credit → dubbo → " + customerGateway.ping());

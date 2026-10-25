@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <!-- 系统管理域服务聚合：api 对外契约 + boot 服务实现（MVC 包结构，业务代码统一在 boot 内按包区分场景） -->
+    <parent>
+        <groupId>com.omnibank</groupId>
+        <artifactId>omni-bank-service</artifactId>
+        <version>1.0.0-SNAPSHOT</version>
+    </parent>
+
+    <artifactId>omni-bank-service-system</artifactId>
+    <packaging>pom</packaging>
+
+    <name>omni-bank-service-system</name>
+    <description>系统管理域服务：用户/角色/菜单权限/数据权限/机构部门/岗位/字典/系统设置/操作日志/通知/附件（端口 8104）。</description>
+
+    <modules>
+        <module>omni-bank-service-system-api</module>
+        <module>omni-bank-service-system-boot</module>
+    </modules>
+</project>

@@ -8,7 +8,7 @@ import org.springframework.boot.autoconfigure.SpringBootApplication;
  * 当前为最小骨架：web + 注册发现（Nacos，默认关闭）；数据库/缓存/消息接入时按 application.yml 的 TODO 补充。
  * 后续规划：决策引擎独立部署时由本服务拆出，目标 P99 < 100ms。
  */
-@SpringBootApplication(scanBasePackages = {"com.omnibank.service.risk", "com.omnibank.common.web"})
+@SpringBootApplication(scanBasePackages = "com.omnibank.service.risk")
 public class RiskApplication {
 
     public static void main(String[] args) {

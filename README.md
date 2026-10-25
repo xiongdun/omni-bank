@@ -37,19 +37,21 @@ omni-bank
     ├── omni-bank-common-mq          # RocketMQ 消息发送封装
     ├── omni-bank-common-idempotent  # 幂等防重：@Idempotent 注解 + 切面
     ├── omni-bank-common-lock        # 分布式锁：@DistributedLock 注解 + 切面
-    └── omni-bank-common-excel       # EasyExcel 导入导出工具
+    ├── omni-bank-common-excel       # EasyExcel 导入导出工具
+    ├── omni-bank-common-threadpool  # 统一业务线程池：参数可配 + TTL 上下文装饰 + 优雅关闭（自动装配）
 ├── omni-bank-gateway                # API 网关：统一对外入口（Nacos 发现路由转发 + Sentinel 限流熔断 + 全局跨域）
-└── omni-bank-service                # 业务服务聚合模块（7 大业务域，每域 api + boot 双模块；信贷域另含 6 个场景子模块）
+└── omni-bank-service                # 业务服务聚合模块（8 大业务域，每域 api + boot 双模块；信贷域另含 6 个场景子模块）
     ├── omni-bank-service-customer      # 客户域：客户/KYC（8101）
     ├── omni-bank-service-product       # 产品域：信贷产品工厂（8102）
     ├── omni-bank-service-credit        # 信贷域：进件/授信/额度/借据/还款/抵押/贷后（8103，域内按场景拆 6 个子模块：credit/loan/repay/limit/mortgage/postloan）
     ├── omni-bank-service-accounting    # 账务域：会计引擎/总账（8105）
     ├── omni-bank-service-payment       # 支付域：渠道网关/代扣代付（8106）
     ├── omni-bank-service-recon         # 对账域：T+1 对账/差错处理（8107）
-    └── omni-bank-service-risk          # 风控域：决策引擎/名单（8108）
+    ├── omni-bank-service-risk          # 风控域：决策引擎/名单（8108）
+    └── omni-bank-service-system        # 系统管理域：认证(Sa-Token)/用户/角色/菜单权限/数据权限/机构部门/岗位/字典/参数/日志/通知/附件（8104，MVC 包结构）
 ```
 
-业务服务统一按 **api + boot 双模块**组织：`-api` 放 DTO/域错误码/`{域}DubboService` RPC 接口（其他服务跨域调用只依赖它，版本在 parent 统一纳管），`-boot` 为唯一启动器与配置载体。域内复杂业务（如信贷域）再按业务场景拆**场景子模块**（物理 Maven 模块，由 boot 装配为单一服务；域内私有，不进 parent 全局纳管，其他服务只允许依赖对应 api）。业务错误码统一 6 位号段：通用域 `00`（`000200` 成功、`0004xx` 客户端错误、`0005xx` 服务端错误）；业务域/场景前两位为域号——customer `100001-109999`、product `110001-119999`、credit 授信场景 `120001-129999`、loan 借据场景 `130001-139999`（随 credit 服务）、accounting `140001-149999`、payment `150001-159999`、recon `160001-169999`、risk `170001-179999`、repay `180001-189999`、limit `190001-199999`、mortgage `200001-209999`、postloan `210001-219999`。
+业务服务统一按 **api + boot 双模块**组织：`-api` 放 DTO/域错误码/`{域}DubboService` RPC 接口（其他服务跨域调用只依赖它，版本在 parent 统一纳管），`-boot` 为唯一启动器与配置载体。域内复杂业务（如信贷域）再按业务场景拆**场景子模块**（物理 Maven 模块，由 boot 装配为单一服务；域内私有，不进 parent 全局纳管，其他服务只允许依赖对应 api）。业务错误码统一 6 位号段：通用域 `00`（`000200` 成功、`0004xx` 客户端错误、`0005xx` 服务端错误）；业务域/场景前两位为域号——customer `100001-109999`、product `110001-119999`、credit 授信场景 `120001-129999`、loan 借据场景 `130001-139999`（随 credit 服务）、accounting `140001-149999`、payment `150001-159999`、recon `160001-169999`、risk `170001-179999`、repay `180001-189999`、limit `190001-199999`、mortgage `200001-209999`、postloan `210001-219999`、system `220001-229999`。
 
 场景子模块内部采用 **DDD 分层**：`application`（应用服务，用例编排入口）/ `domain`（聚合根/实体/仓储接口/领域服务）/ `infrastructure`（仓储实现、外部适配）；**web 与 rpc 适配层统一收口在 boot**（`adapter.web` / `adapter.rpc`，委托领域模块应用服务），领域模块不依赖 spring-web 与 dubbo。
 
@@ -109,7 +111,7 @@ omni-bank
 
 ## 公共组件使用
 
-**约定**：公共模块的 Bean 通过组件扫描发现，服务应用启动类需位于 `com.omnibank` 包下。
+**约定**：common 组件基于 **Spring Boot 自动装配**（`META-INF/spring/...AutoConfiguration.imports`），业务 boot 模块引依赖即生效，启动类无需扫描 common 包；服务自身的 Bean 位于 `com.omnibank.service.{域}` 包下由启动类扫描。
 
 ### 统一响应与异常
 
@@ -187,6 +189,8 @@ mvn deploy \
 ```
 
 ## 开发约定与维护注意点
+
+**数据访问（credit 已接入）**：boot 模块引入 `omni-bank-common-mybatis` + `mysql-connector-j`（runtime），启动类声明 `@MapperScan(basePackages = "com.omnibank.service.{域}", annotationClass = Mapper.class)`；Mapper 放各场景模块 `infrastructure.persistence.mapper`，实体继承 `BaseEntity`（雪花 ID + 审计字段自动填充 + 逻辑删除）。datasource 配置按 profile 拆分（local 本地占位 / prod 环境变量注入）；**本地无 MySQL 会因 HikariCP 初始化阻断启动**，需先建库 `omni_bank` 并执行 `docs/sql/omni_bank_sys.sql`（系统管理域全量表 + 初始化数据，初始账号 admin/admin123）。业务线程池由 `omni-bank-common-threadpool` 自动装配，`omni.thread-pool.*` 可配。**认证鉴权**：system 服务基于 Sa-Token（登录签发 token，管理端 Header `Authorization` 携带；`@SaCheckPermission` 注解鉴权；super_admin 角色通配全部权限点），其他服务跨域鉴权经 `system-api` 的 Dubbo 契约（`PermissionDubboService`/`UserDubboService`）。
 
 - **Spring Boot 升级**需两处同步：`omni-bank-parent` 的 `spring-boot-starter-parent` 版本 + BOM 的 `spring-boot.version`
 - **Lombok / MapStruct 版本升级**需与 `omni-bank-parent` 中 compiler 插件 `annotationProcessorPaths` 的三个硬编码版本同步（import 的 BOM 不传递属性）

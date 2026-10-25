@@ -1,0 +1,97 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <parent>
+        <groupId>com.omnibank</groupId>
+        <artifactId>omni-bank-service-system</artifactId>
+        <version>1.0.0-SNAPSHOT</version>
+    </parent>
+
+    <artifactId>omni-bank-service-system-boot</artifactId>
+
+    <name>omni-bank-service-system-boot</name>
+    <description>系统管理域服务实现（端口 8104）：MVC 包结构，业务代码按 auth/user/role/menu/org 等包区分场景。</description>
+
+    <dependencies>
+        <dependency>
+            <groupId>com.omnibank</groupId>
+            <artifactId>omni-bank-service-system-api</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>com.omnibank</groupId>
+            <artifactId>omni-bank-common-core</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>com.omnibank</groupId>
+            <artifactId>omni-bank-common-web</artifactId>
+        </dependency>
+        <!-- 数据访问：MyBatis-Plus 支撑 -->
+        <dependency>
+            <groupId>com.omnibank</groupId>
+            <artifactId>omni-bank-common-mybatis</artifactId>
+        </dependency>
+        <!-- 统一业务线程池（操作日志异步落库等） -->
+        <dependency>
+            <groupId>com.omnibank</groupId>
+            <artifactId>omni-bank-common-threadpool</artifactId>
+        </dependency>
+        <!-- MySQL 驱动 -->
+        <dependency>
+            <groupId>com.mysql</groupId>
+            <artifactId>mysql-connector-j</artifactId>
+            <scope>runtime</scope>
+        </dependency>
+        <!-- 探活统一走 /actuator/health -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-actuator</artifactId>
+        </dependency>
+        <!-- 认证鉴权：Sa-Token（登录/token/权限/会话） -->
+        <dependency>
+            <groupId>cn.dev33</groupId>
+            <artifactId>sa-token-spring-boot3-starter</artifactId>
+        </dependency>
+        <!-- 密码加密：BCrypt（仅 crypto，不引入全套 Security） -->
+        <dependency>
+            <groupId>org.springframework.security</groupId>
+            <artifactId>spring-security-crypto</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>com.alibaba.cloud</groupId>
+            <artifactId>spring-cloud-starter-alibaba-nacos-discovery</artifactId>
+        </dependency>
+        <!-- Dubbo RPC（triple 协议）：对外暴露用户/权限契约，版本由 dubbo-bom 统一管理 -->
+        <dependency>
+            <groupId>org.apache.dubbo</groupId>
+            <artifactId>dubbo-spring-boot-starter</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.apache.dubbo</groupId>
+            <artifactId>dubbo-registry-nacos</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.projectlombok</groupId>
+            <artifactId>lombok</artifactId>
+            <optional>true</optional>
+        </dependency>
+    </dependencies>
+
+    <build>
+        <plugins>
+            <plugin>
+                <groupId>org.springframework.boot</groupId>
+                <artifactId>spring-boot-maven-plugin</artifactId>
+                <executions>
+                    <execution>
+                        <goals>
+                            <goal>repackage</goal>
+                        </goals>
+                    </execution>
+                </executions>
+            </plugin>
+        </plugins>
+    </build>
+</project>
