@@ -4,14 +4,17 @@ import com.omnibank.common.core.exception.BizException;
 import com.omnibank.common.core.result.GlobalErrorCode;
 import com.omnibank.common.core.result.Result;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.http.HttpStatus;
 import org.springframework.validation.FieldError;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
+import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+import org.springframework.web.servlet.resource.NoResourceFoundException;
 
 /**
  * 全局异常处理：将异常统一转换为 {@link Result} 响应。
- * 约定：服务应用启动类需位于 com.omnibank 包下，使本模块 Bean 被组件扫描。
+ * 约定：服务应用启动类需显式扫描 com.omnibank.common.web（见各 boot 启动类 scanBasePackages）。
  */
 @Slf4j
 @RestControllerAdvice
@@ -31,6 +34,14 @@ public class GlobalExceptionHandler {
         String msg = fieldError == null ? GlobalErrorCode.PARAM_ERROR.getMsg() : fieldError.getDefaultMessage();
         log.warn("参数校验失败: {}", msg);
         return Result.failure(GlobalErrorCode.PARAM_ERROR, msg);
+    }
+
+    /** 资源不存在：保持 404 语义，不被兜底异常吞掉 */
+    @ResponseStatus(HttpStatus.NOT_FOUND)
+    @ExceptionHandler(NoResourceFoundException.class)
+    public Result<Void> handleNoResourceFound(NoResourceFoundException e) {
+        log.warn("资源不存在: {}", e.getResourcePath());
+        return Result.failure(GlobalErrorCode.NOT_FOUND);
     }
 
     /** 兜底异常：不向前端暴露内部细节，error 级别记录堆栈 */
