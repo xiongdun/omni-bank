@@ -12,6 +12,7 @@
 | 核心框架 | Spring Boot | 3.5.16 |
 | | Spring Cloud | 2025.0.3 |
 | | Spring Cloud Alibaba | 2025.0.0.0（内置 Nacos / Sentinel 1.8.9 / Seata 2.5.0 / RocketMQ 5.3.1 客户端管理） |
+| RPC | Apache Dubbo（triple 协议，服务间调用） | 3.3.6（官方 dubbo-bom 纳管；SCA BOM 不含 Dubbo） |
 | 数据访问 | MyBatis-Plus（+ jsqlparser） | 3.5.17 |
 | | ShardingSphere JDBC（预留，接入时评估） | 5.5.3 |
 | 缓存 | Redisson | 3.52.0（3.x 末版，适配 Boot 3；4.x 面向 Boot 4） |
@@ -27,7 +28,7 @@ omni-bank
 ├── pom.xml                          # 聚合根：仅负责聚合构建，不承载依赖管理
 ├── omni-bank-dependencies           # 基础 BOM：三方依赖版本唯一来源（无 parent，可被任意工程 import）
 ├── omni-bank-parent                 # 父 POM：所有模块的 parent（编译配置/内部构件版本/私服发布）
-└── omni-bank-common                 # 公共组件聚合模块（按需引用子模块，不直接依赖本模块）
+├── omni-bank-common                 # 公共组件聚合模块（按需引用子模块，不直接依赖本模块）
     ├── omni-bank-common-core        # 统一响应体 Result / 错误码体系 / 业务异常 BizException
     ├── omni-bank-common-web         # 全局异常处理（业务/参数校验/兜底 → 统一响应）
     ├── omni-bank-common-mybatis     # MyBatis-Plus 支撑：分页插件 / BaseEntity（雪花 ID + 审计字段填充）
@@ -37,10 +38,26 @@ omni-bank
     ├── omni-bank-common-idempotent  # 幂等防重：@Idempotent 注解 + 切面
     ├── omni-bank-common-lock        # 分布式锁：@DistributedLock 注解 + 切面
     └── omni-bank-common-excel       # EasyExcel 导入导出工具
+├── omni-bank-gateway                # API 网关：统一对外入口（Nacos 发现路由转发 + Sentinel 限流熔断 + 全局跨域）
+└── omni-bank-service                # 业务服务聚合模块（8 大业务域，每域 api + biz 双模块）
+    ├── omni-bank-service-customer      # 客户域：客户/KYC（8101）
+    ├── omni-bank-service-product       # 产品域：信贷产品工厂（8102）
+    ├── omni-bank-service-credit        # 信贷域：进件/审批/借据（8103）
+    ├── omni-bank-service-loan          # 借据域：借据生命周期/还款计划/计息（8104）
+    ├── omni-bank-service-accounting    # 账务域：会计引擎/总账（8105）
+    ├── omni-bank-service-payment       # 支付域：渠道网关/代扣代付（8106）
+    ├── omni-bank-service-recon         # 对账域：T+1 对账/差错处理（8107）
+    └── omni-bank-service-risk          # 风控域：决策引擎/名单（8108）
 ```
 
-后续规划的业务域服务（暂不拆分，公共层稳定后逐步启动）：
-`gateway` / `customer` / `product` / `credit` / `loan` / `accounting` / `payment` / `recon` / `risk`。
+业务服务统一按 **api + biz 双模块**组织：`-api` 放 DTO/域错误码/`{域}DubboService` RPC 接口（其他服务跨域调用只依赖它，版本在 parent 统一纳管），`-biz` 放启动类与实现。每个服务内置 `/{域}/ping` 探活接口，用于联调验证 `网关 /api/{域}/ping → 服务` 链路。业务错误码实行号段制：customer 1xxxx、product 11xxx、credit 12xxx、loan 13xxx、accounting 14xxx、payment 15xxx、recon 16xxx、risk 17xxx。
+
+**服务间调用统一走 Dubbo RPC**（架构：网关保持 HTTP 转发，服务之间全 Dubbo）：
+
+- 接口契约在各域 api 模块（`{域}DubboService`），biz 侧 `@DubboService` 暴露、调用方 `@DubboReference` 注入
+- 协议 triple（HTTP/2），端口 20881-20888 按 customer→risk 顺序分配；注册中心复用 Nacos
+- 无 Nacos 时 `dubbo.registry.check=false` + `dubbo.consumer.check=false` 允许裸启动，调用期失败由全局异常处理兜底
+- 跨域演示：credit 的 `/credit/rpc-ping` 通过 Dubbo 调用 customer（联调需 Nacos + customer 在线）
 
 ## 版本管理机制
 
@@ -123,7 +140,9 @@ public class LoanApply extends BaseEntity { ... }
 
 ## 快速开始
 
-**环境要求**：JDK 21+、Maven 3.9+（开发环境参考：JDK 21.0.10 + Maven 3.9.6，镜像走阿里云）
+**环境要求**：JDK 21+、Maven 3.9+（开发环境参考：JDK 21.0.10 + Maven 3.9.6）
+
+项目 POM 已内置 **Aliyun 国内仓库声明**（`aliyun-public` + `aliyun-snapshots`，声明于聚合根/parent/dependencies 三处），克隆后无需在 settings.xml 配置镜像即可走国内源加速构建。
 
 ```bash
 # 全量构建（含本地安装，业务模块即可互相引用）
@@ -131,9 +150,19 @@ mvn clean install
 
 # 仅构建某一模块（如公共组件）
 mvn install -pl omni-bank-common/omni-bank-common-core
+
+# 启动网关（默认 8080；本地无 Nacos 时默认关闭注册发现，NACOS_ENABLED=true 打开）
+mvn spring-boot:run -pl omni-bank-gateway
+
+# 启动业务服务（以信贷域为例，端口 8103，内置 /credit/ping 探活）
+mvn spring-boot:run -pl omni-bank-service/omni-bank-service-credit/omni-bank-service-credit-biz
 ```
 
-当前仓库无可启动应用；首个业务服务模块落地后在此处补充启动说明与配置示例。
+**网关说明**（`omni-bank-gateway`，统一对外入口）：
+
+- **路由转发**：Nacos 服务发现自动路由（`discovery.locator`，`/{服务名}/**` → `lb://{服务名}`）+ 8 条显式业务路由（`/api/{域}/**` → `lb://omni-bank-service-{域}`，`StripPrefix=1` 去前缀），新服务在 `application.yml` 按模板登记
+- **限流熔断**：Sentinel（路由维度 / API 分组维度），兜底响应统一为 Result 结构、HTTP 429；规则由 Sentinel Dashboard（默认 `127.0.0.1:8858`）下发，持久化后续接 Nacos 数据源
+- **当前阶段**：本地无 Nacos 时注册发现默认关闭（`NACOS_ENABLED=true` 开启），网关可独立启动；下游服务不存在时转发返回 503 属预期
 
 ## 私服发布
 

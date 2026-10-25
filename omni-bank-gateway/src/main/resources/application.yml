@@ -1,0 +1,88 @@
+server:
+  port: 8080
+
+spring:
+  application:
+    name: omni-bank-gateway
+  cloud:
+    # Nacos 注册中心：服务发现路由的数据来源
+    nacos:
+      discovery:
+        # 当前阶段本地无 Nacos，默认关闭注册发现保证网关可独立启动；
+        # 部署 Nacos 后通过环境变量 NACOS_ENABLED=true 打开（服务转发随之生效）
+        enabled: ${NACOS_ENABLED:false}
+        server-addr: ${NACOS_SERVER_ADDR:127.0.0.1:8848}
+    # Sentinel 限流熔断
+    sentinel:
+      # 启动即连接 Dashboard 拉取规则（Dashboard 未启动时仅打印连接告警，不影响网关运行）
+      eager: true
+      transport:
+        dashboard: ${SENTINEL_DASHBOARD_ADDR:127.0.0.1:8858}
+        port: 8719
+    # 2025.0.x 起响应式网关配置前缀迁移至 spring.cloud.gateway.server.webflux
+    gateway:
+      server:
+        webflux:
+          # 全局跨域：管理端前后端分离联调使用（生产环境必须收紧 allowed-origin-patterns）
+          globalcors:
+            cors-configurations:
+              '[/**]':
+                allowed-origin-patterns: "*"
+                allowed-methods: "*"
+                allowed-headers: "*"
+                allow-credentials: true
+          # 服务发现路由：按 Nacos 服务名自动生成转发规则（/{服务名}/** → lb://{服务名}）
+          discovery:
+            locator:
+              enabled: true
+              lower-case-service-id: true
+          # 显式路由：业务服务统一走 /api/{域}/** 前缀（uri 前缀 lb = 从注册中心负载均衡转发）
+          routes:
+            - id: customer
+              uri: lb://omni-bank-service-customer
+              predicates:
+                - Path=/api/customer/**
+              filters:
+                - StripPrefix=1
+            - id: product
+              uri: lb://omni-bank-service-product
+              predicates:
+                - Path=/api/product/**
+              filters:
+                - StripPrefix=1
+            - id: credit
+              uri: lb://omni-bank-service-credit
+              predicates:
+                - Path=/api/credit/**
+              filters:
+                - StripPrefix=1
+            - id: loan
+              uri: lb://omni-bank-service-loan
+              predicates:
+                - Path=/api/loan/**
+              filters:
+                - StripPrefix=1
+            - id: accounting
+              uri: lb://omni-bank-service-accounting
+              predicates:
+                - Path=/api/accounting/**
+              filters:
+                - StripPrefix=1
+            - id: payment
+              uri: lb://omni-bank-service-payment
+              predicates:
+                - Path=/api/payment/**
+              filters:
+                - StripPrefix=1
+            - id: recon
+              uri: lb://omni-bank-service-recon
+              predicates:
+                - Path=/api/recon/**
+              filters:
+                - StripPrefix=1
+            - id: risk
+              uri: lb://omni-bank-service-risk
+              predicates:
+                - Path=/api/risk/**
+              filters:
+                - StripPrefix=1

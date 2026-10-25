@@ -26,6 +26,8 @@
         <module>omni-bank-dependencies</module>
         <module>omni-bank-parent</module>
         <module>omni-bank-common</module>
+        <module>omni-bank-gateway</module>
+        <module>omni-bank-service</module>
     </modules>
 
     <properties>
@@ -36,6 +38,57 @@
         <omni.repo.release.url>http://nexus.example.com/repository/maven-releases/</omni.repo.release.url>
         <omni.repo.snapshot.url>http://nexus.example.com/repository/maven-snapshots/</omni.repo.snapshot.url>
     </properties>
+
+    <!-- 远程仓库：Aliyun 国内镜像（项目级声明；未配置镜像的环境默认走国内源，settings.xml 已配置镜像的环境不受影响） -->
+    <repositories>
+        <repository>
+            <id>aliyun-public</id>
+            <name>Aliyun Public Repository</name>
+            <url>https://maven.aliyun.com/repository/public</url>
+            <releases>
+                <enabled>true</enabled>
+            </releases>
+            <snapshots>
+                <enabled>false</enabled>
+            </snapshots>
+        </repository>
+        <repository>
+            <id>aliyun-snapshots</id>
+            <name>Aliyun Snapshot Repository</name>
+            <url>https://maven.aliyun.com/repository/snapshots</url>
+            <releases>
+                <enabled>false</enabled>
+            </releases>
+            <snapshots>
+                <enabled>true</enabled>
+            </snapshots>
+        </repository>
+    </repositories>
+
+    <pluginRepositories>
+        <pluginRepository>
+            <id>aliyun-public</id>
+            <name>Aliyun Public Plugin Repository</name>
+            <url>https://maven.aliyun.com/repository/public</url>
+            <releases>
+                <enabled>true</enabled>
+            </releases>
+            <snapshots>
+                <enabled>false</enabled>
+            </snapshots>
+        </pluginRepository>
+        <pluginRepository>
+            <id>aliyun-snapshots</id>
+            <name>Aliyun Snapshot Plugin Repository</name>
+            <url>https://maven.aliyun.com/repository/snapshots</url>
+            <releases>
+                <enabled>false</enabled>
+            </releases>
+            <snapshots>
+                <enabled>true</enabled>
+            </snapshots>
+        </pluginRepository>
+    </pluginRepositories>
 
     <!--
         私服发布地址（属性占位）：保证在聚合根执行 mvn deploy 时三个 POM 均可正常发布。

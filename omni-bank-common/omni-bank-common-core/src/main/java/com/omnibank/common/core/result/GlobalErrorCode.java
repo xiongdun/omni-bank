@@ -11,14 +11,14 @@ import lombok.Getter;
 @AllArgsConstructor
 public enum GlobalErrorCode implements ErrorCode {
 
-    SUCCESS("200", "成功"),
-    PARAM_ERROR("400", "请求参数错误"),
-    UNAUTHORIZED("401", "未认证或凭证已失效"),
-    FORBIDDEN("403", "无访问权限"),
-    NOT_FOUND("404", "资源不存在"),
-    DUPLICATE_REQUEST("409", "请勿重复提交"),
-    SYSTEM_ERROR("500", "系统内部错误"),
-    SERVICE_UNAVAILABLE("503", "服务暂不可用，请稍后重试");
+    SUCCESS("000200", "成功"),
+    PARAM_ERROR("000400", "请求参数错误"),
+    UNAUTHORIZED("000401", "未认证或凭证已失效"),
+    FORBIDDEN("000403", "无访问权限"),
+    NOT_FOUND("000404", "资源不存在"),
+    DUPLICATE_REQUEST("000409", "请勿重复提交"),
+    SYSTEM_ERROR("000500", "系统内部错误"),
+    SERVICE_UNAVAILABLE("000503", "服务暂不可用，请稍后重试");
 
     private final String code;
 

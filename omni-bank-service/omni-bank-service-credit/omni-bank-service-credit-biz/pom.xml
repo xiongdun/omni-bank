@@ -1,0 +1,71 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <parent>
+        <groupId>com.omnibank</groupId>
+        <artifactId>omni-bank-service-credit</artifactId>
+        <version>1.0.0-SNAPSHOT</version>
+    </parent>
+
+    <artifactId>omni-bank-service-credit-biz</artifactId>
+
+    <name>omni-bank-service-credit-biz</name>
+    <description>信贷域服务实现（端口 8103）：依赖 api 对外契约与公共组件，中间件按 TODO 清单逐步接入。</description>
+
+    <dependencies>
+        <dependency>
+            <groupId>com.omnibank</groupId>
+            <artifactId>omni-bank-service-credit-api</artifactId>
+        </dependency>
+        <!-- 跨域 Dubbo 调用演示：credit → customer（联调需 Nacos + customer 在线） -->
+        <dependency>
+            <groupId>com.omnibank</groupId>
+            <artifactId>omni-bank-service-customer-api</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>com.omnibank</groupId>
+            <artifactId>omni-bank-common-core</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>com.omnibank</groupId>
+            <artifactId>omni-bank-common-web</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>com.alibaba.cloud</groupId>
+            <artifactId>spring-cloud-starter-alibaba-nacos-discovery</artifactId>
+        </dependency>
+        <!-- Dubbo RPC（triple 协议）：服务间调用；版本由 dubbo-bom 统一管理 -->
+        <dependency>
+            <groupId>org.apache.dubbo</groupId>
+            <artifactId>dubbo-spring-boot-starter</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.apache.dubbo</groupId>
+            <artifactId>dubbo-registry-nacos</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.projectlombok</groupId>
+            <artifactId>lombok</artifactId>
+            <optional>true</optional>
+        </dependency>
+    </dependencies>
+
+    <build>
+        <plugins>
+            <plugin>
+                <groupId>org.springframework.boot</groupId>
+                <artifactId>spring-boot-maven-plugin</artifactId>
+                <executions>
+                    <execution>
+                        <goals>
+                            <goal>repackage</goal>
+                        </goals>
+                    </execution>
+                </executions>
+            </plugin>
+        </plugins>
+    </build>
+</project>

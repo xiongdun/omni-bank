@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <!-- 账务域服务聚合：api 对外契约 + biz 服务实现 -->
+    <parent>
+        <groupId>com.omnibank</groupId>
+        <artifactId>omni-bank-service</artifactId>
+        <version>1.0.0-SNAPSHOT</version>
+    </parent>
+
+    <artifactId>omni-bank-service-accounting</artifactId>
+    <packaging>pom</packaging>
+
+    <name>omni-bank-service-accounting</name>
+    <description>账务域服务：会计引擎（复式记账 / 科目 / 凭证 / 总账，端口 8105）。</description>
+
+    <modules>
+        <module>omni-bank-service-accounting-api</module>
+        <module>omni-bank-service-accounting-biz</module>
+    </modules>
+</project>

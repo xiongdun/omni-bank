@@ -25,6 +25,8 @@
         <spring-cloud.version>2025.0.3</spring-cloud.version>
         <!-- Spring Cloud Alibaba（对应 Cloud 2025.0.x / Boot 3.5.x）：内置 Nacos / Sentinel 1.8.9 / Seata 2.5.0 / RocketMQ 5.3.1 客户端管理 -->
         <spring-cloud-alibaba.version>2025.0.0.0</spring-cloud-alibaba.version>
+        <!-- Apache Dubbo（SCA BOM 不纳管 Dubbo，走官方 dubbo-bom）：服务间 RPC，triple 协议，注册中心 Nacos -->
+        <dubbo.version>3.3.6</dubbo.version>
 
         <!-- ==================== 三方库版本 ==================== -->
         <lombok.version>1.18.48</lombok.version>
@@ -74,6 +76,14 @@
                 <groupId>com.alibaba.cloud</groupId>
                 <artifactId>spring-cloud-alibaba-dependencies</artifactId>
                 <version>${spring-cloud-alibaba.version}</version>
+                <type>pom</type>
+                <scope>import</scope>
+            </dependency>
+            <!-- Apache Dubbo BOM：dubbo-spring-boot-starter / dubbo-registry-nacos 等全量版本 -->
+            <dependency>
+                <groupId>org.apache.dubbo</groupId>
+                <artifactId>dubbo-bom</artifactId>
+                <version>${dubbo.version}</version>
                 <type>pom</type>
                 <scope>import</scope>
             </dependency>
@@ -170,6 +180,57 @@
             </dependency>
         </dependencies>
     </dependencyManagement>
+
+    <!-- 远程仓库：Aliyun 国内镜像（BOM 可独立构建，单独声明；未配置镜像的环境默认走国内源） -->
+    <repositories>
+        <repository>
+            <id>aliyun-public</id>
+            <name>Aliyun Public Repository</name>
+            <url>https://maven.aliyun.com/repository/public</url>
+            <releases>
+                <enabled>true</enabled>
+            </releases>
+            <snapshots>
+                <enabled>false</enabled>
+            </snapshots>
+        </repository>
+        <repository>
+            <id>aliyun-snapshots</id>
+            <name>Aliyun Snapshot Repository</name>
+            <url>https://maven.aliyun.com/repository/snapshots</url>
+            <releases>
+                <enabled>false</enabled>
+            </releases>
+            <snapshots>
+                <enabled>true</enabled>
+            </snapshots>
+        </repository>
+    </repositories>
+
+    <pluginRepositories>
+        <pluginRepository>
+            <id>aliyun-public</id>
+            <name>Aliyun Public Plugin Repository</name>
+            <url>https://maven.aliyun.com/repository/public</url>
+            <releases>
+                <enabled>true</enabled>
+            </releases>
+            <snapshots>
+                <enabled>false</enabled>
+            </snapshots>
+        </pluginRepository>
+        <pluginRepository>
+            <id>aliyun-snapshots</id>
+            <name>Aliyun Snapshot Plugin Repository</name>
+            <url>https://maven.aliyun.com/repository/snapshots</url>
+            <releases>
+                <enabled>false</enabled>
+            </releases>
+            <snapshots>
+                <enabled>true</enabled>
+            </snapshots>
+        </pluginRepository>
+    </pluginRepositories>
 
     <!--
         私服发布地址（属性占位）：默认值为占位地址，实际发布时二选一覆盖：

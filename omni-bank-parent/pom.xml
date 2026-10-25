@@ -94,8 +94,99 @@
                 <artifactId>omni-bank-common-excel</artifactId>
                 <version>${omni-bank.version}</version>
             </dependency>
+            <dependency>
+                <groupId>com.omnibank</groupId>
+                <artifactId>omni-bank-service-customer-api</artifactId>
+                <version>${omni-bank.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>com.omnibank</groupId>
+                <artifactId>omni-bank-service-product-api</artifactId>
+                <version>${omni-bank.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>com.omnibank</groupId>
+                <artifactId>omni-bank-service-credit-api</artifactId>
+                <version>${omni-bank.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>com.omnibank</groupId>
+                <artifactId>omni-bank-service-loan-api</artifactId>
+                <version>${omni-bank.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>com.omnibank</groupId>
+                <artifactId>omni-bank-service-accounting-api</artifactId>
+                <version>${omni-bank.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>com.omnibank</groupId>
+                <artifactId>omni-bank-service-payment-api</artifactId>
+                <version>${omni-bank.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>com.omnibank</groupId>
+                <artifactId>omni-bank-service-recon-api</artifactId>
+                <version>${omni-bank.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>com.omnibank</groupId>
+                <artifactId>omni-bank-service-risk-api</artifactId>
+                <version>${omni-bank.version}</version>
+            </dependency>
         </dependencies>
     </dependencyManagement>
+
+    <!-- 远程仓库：Aliyun 国内镜像（项目级声明，所有业务模块继承；未配置镜像的环境默认走国内源，settings.xml 已配置镜像的环境不受影响） -->
+    <repositories>
+        <repository>
+            <id>aliyun-public</id>
+            <name>Aliyun Public Repository</name>
+            <url>https://maven.aliyun.com/repository/public</url>
+            <releases>
+                <enabled>true</enabled>
+            </releases>
+            <snapshots>
+                <enabled>false</enabled>
+            </snapshots>
+        </repository>
+        <repository>
+            <id>aliyun-snapshots</id>
+            <name>Aliyun Snapshot Repository</name>
+            <url>https://maven.aliyun.com/repository/snapshots</url>
+            <releases>
+                <enabled>false</enabled>
+            </releases>
+            <snapshots>
+                <enabled>true</enabled>
+            </snapshots>
+        </repository>
+    </repositories>
+
+    <pluginRepositories>
+        <pluginRepository>
+            <id>aliyun-public</id>
+            <name>Aliyun Public Plugin Repository</name>
+            <url>https://maven.aliyun.com/repository/public</url>
+            <releases>
+                <enabled>true</enabled>
+            </releases>
+            <snapshots>
+                <enabled>false</enabled>
+            </snapshots>
+        </pluginRepository>
+        <pluginRepository>
+            <id>aliyun-snapshots</id>
+            <name>Aliyun Snapshot Plugin Repository</name>
+            <url>https://maven.aliyun.com/repository/snapshots</url>
+            <releases>
+                <enabled>false</enabled>
+            </releases>
+            <snapshots>
+                <enabled>true</enabled>
+            </snapshots>
+        </pluginRepository>
+    </pluginRepositories>
 
     <build>
         <pluginManagement>

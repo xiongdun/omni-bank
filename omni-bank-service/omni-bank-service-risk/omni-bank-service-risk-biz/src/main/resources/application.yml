@@ -1,0 +1,33 @@
+server:
+  port: 8108
+
+spring:
+  application:
+    name: omni-bank-service-risk
+  cloud:
+    nacos:
+      discovery:
+        # 与网关一致：本地无 Nacos 默认关闭注册，NACOS_ENABLED=true 打开
+        enabled: ${NACOS_ENABLED:false}
+        server-addr: ${NACOS_SERVER_ADDR:127.0.0.1:8848}
+
+# Dubbo RPC（triple 协议）：服务间调用；注册中心复用 Nacos，无 Nacos 时 check=false 允许裸启动
+dubbo:
+  application:
+    name: ${spring.application.name}
+  registry:
+    # 默认 N/A（无注册中心，骨架期裸启动）；联调/部署时注入真实地址：-DDUBBO_REGISTRY_ADDRESS=nacos://127.0.0.1:8848
+    address: ${DUBBO_REGISTRY_ADDRESS:N/A}
+    register-mode: instance
+    check: false
+  protocol:
+    name: tri
+    port: 20888
+  consumer:
+    check: false
+
+# TODO 中间件接入清单：
+#  - MySQL + MyBatis-Plus：引入 omni-bank-common-mybatis，补充 datasource 配置
+#  - Redis：引入 omni-bank-common-remote-cache，补充 redis/redisson 配置（实时特征/名单缓存）
+#  - Elasticsearch：黑名单/名单检索接入后补充配置
+#  - 决策引擎：Drools 8 + Aviator 决策流编排，评分模型 JPMML/ONNX
