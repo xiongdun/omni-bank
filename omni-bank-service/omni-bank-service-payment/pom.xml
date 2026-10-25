@@ -19,6 +19,6 @@
 
     <modules>
         <module>omni-bank-service-payment-api</module>
-        <module>omni-bank-service-payment-biz</module>
+        <module>omni-bank-service-payment-boot</module>
     </modules>
 </project>

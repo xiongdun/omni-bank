@@ -1,0 +1,120 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <parent>
+        <groupId>com.omnibank</groupId>
+        <artifactId>omni-bank-service-credit</artifactId>
+        <version>1.0.0-SNAPSHOT</version>
+    </parent>
+
+    <artifactId>omni-bank-service-credit-boot</artifactId>
+
+    <name>omni-bank-service-credit-boot</name>
+    <description>信贷域服务实现（端口 8103）：依赖 api 对外契约与公共组件，中间件按 TODO 清单逐步接入。</description>
+
+    <dependencies>
+        <dependency>
+            <groupId>com.omnibank</groupId>
+            <artifactId>omni-bank-service-credit-api</artifactId>
+        </dependency>
+        <!-- 跨域 Dubbo 调用演示专用（RpcDemoController，demo profile）：optional 保证生产包不携带 -->
+        <dependency>
+            <groupId>com.omnibank</groupId>
+            <artifactId>omni-bank-service-customer-api</artifactId>
+            <optional>true</optional>
+        </dependency>
+        <!-- 信贷域场景模块：域内私有实现，版本随 ${omni-bank.version}，不进 parent 全局纳管（其他服务只允许依赖 credit-api） -->
+        <dependency>
+            <groupId>com.omnibank</groupId>
+            <artifactId>omni-bank-service-credit-credit</artifactId>
+            <version>${omni-bank.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>com.omnibank</groupId>
+            <artifactId>omni-bank-service-credit-loan</artifactId>
+            <version>${omni-bank.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>com.omnibank</groupId>
+            <artifactId>omni-bank-service-credit-repay</artifactId>
+            <version>${omni-bank.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>com.omnibank</groupId>
+            <artifactId>omni-bank-service-credit-limit</artifactId>
+            <version>${omni-bank.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>com.omnibank</groupId>
+            <artifactId>omni-bank-service-credit-mortgage</artifactId>
+            <version>${omni-bank.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>com.omnibank</groupId>
+            <artifactId>omni-bank-service-credit-postloan</artifactId>
+            <version>${omni-bank.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>com.omnibank</groupId>
+            <artifactId>omni-bank-common-core</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>com.omnibank</groupId>
+            <artifactId>omni-bank-common-web</artifactId>
+        </dependency>
+        <!-- 探活统一走 /actuator/health（liveness/readiness），替代手写 ping 接口 -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-actuator</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>com.alibaba.cloud</groupId>
+            <artifactId>spring-cloud-starter-alibaba-nacos-discovery</artifactId>
+        </dependency>
+        <!-- Dubbo RPC（triple 协议）：服务间调用；版本由 dubbo-bom 统一管理 -->
+        <dependency>
+            <groupId>org.apache.dubbo</groupId>
+            <artifactId>dubbo-spring-boot-starter</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.apache.dubbo</groupId>
+            <artifactId>dubbo-registry-nacos</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.projectlombok</groupId>
+            <artifactId>lombok</artifactId>
+            <optional>true</optional>
+        </dependency>
+        <!-- 单测支撑（JUnit5 等） -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-test</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <!-- 架构守护：ArchUnit 固化模块边界（领域纯净/依赖方向/场景隔离），随 mvn test 执行 -->
+        <dependency>
+            <groupId>com.tngtech.archunit</groupId>
+            <artifactId>archunit</artifactId>
+            <scope>test</scope>
+        </dependency>
+    </dependencies>
+
+    <build>
+        <plugins>
+            <plugin>
+                <groupId>org.springframework.boot</groupId>
+                <artifactId>spring-boot-maven-plugin</artifactId>
+                <executions>
+                    <execution>
+                        <goals>
+                            <goal>repackage</goal>
+                        </goals>
+                    </execution>
+                </executions>
+            </plugin>
+        </plugins>
+    </build>
+</project>

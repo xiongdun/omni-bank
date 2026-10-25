@@ -1,0 +1,28 @@
+server:
+  port: 8108
+
+spring:
+  application:
+    name: omni-bank-service-risk
+  profiles:
+    # 环境通过 SPRING_PROFILES_ACTIVE 注入（local / prod），缺省 local
+    active: ${SPRING_PROFILES_ACTIVE:local}
+
+# Dubbo RPC（triple 协议）：服务间调用；注册中心地址在 profile 中按环境配置
+dubbo:
+  application:
+    name: ${spring.application.name}
+  registry:
+    register-mode: instance
+    check: false
+  protocol:
+    name: tri
+    port: 20888
+  consumer:
+    check: false
+
+# TODO 中间件接入清单：
+#  - MySQL + MyBatis-Plus：引入 omni-bank-common-mybatis，补充 datasource 配置
+#  - Redis：引入 omni-bank-common-remote-cache，补充 redis/redisson 配置（实时特征/名单缓存）
+#  - Elasticsearch：黑名单/名单检索接入后补充配置
+#  - 决策引擎：Drools 8 + Aviator 决策流编排，评分模型 JPMML/ONNX

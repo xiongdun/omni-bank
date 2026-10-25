@@ -19,6 +19,6 @@
 
     <modules>
         <module>omni-bank-service-accounting-api</module>
-        <module>omni-bank-service-accounting-biz</module>
+        <module>omni-bank-service-accounting-boot</module>
     </modules>
 </project>

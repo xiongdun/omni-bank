@@ -27,6 +27,8 @@
         <spring-cloud-alibaba.version>2025.0.0.0</spring-cloud-alibaba.version>
         <!-- Apache Dubbo（SCA BOM 不纳管 Dubbo，走官方 dubbo-bom）：服务间 RPC，triple 协议，注册中心 Nacos -->
         <dubbo.version>3.3.6</dubbo.version>
+        <!-- ArchUnit：架构守护测试（固化模块边界），使用原生 API + JUnit5 原生 @Test -->
+        <archunit.version>1.5.1</archunit.version>
 
         <!-- ==================== 三方库版本 ==================== -->
         <lombok.version>1.18.48</lombok.version>
@@ -113,6 +115,12 @@
                 <groupId>cn.hutool</groupId>
                 <artifactId>hutool-all</artifactId>
                 <version>${hutool.version}</version>
+            </dependency>
+            <!-- ArchUnit：架构守护测试（核心库，配合 JUnit5 原生 @Test） -->
+            <dependency>
+                <groupId>com.tngtech.archunit</groupId>
+                <artifactId>archunit</artifactId>
+                <version>${archunit.version}</version>
             </dependency>
 
             <!-- ==================== 数据访问 / 缓存 ==================== -->

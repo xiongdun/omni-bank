@@ -15,10 +15,16 @@
     <packaging>pom</packaging>
 
     <name>omni-bank-service-credit</name>
-    <description>信贷域服务：进件申请 / 授信审批（Flowable）/ 借据与还款计划（端口 8103）。</description>
+    <description>信贷域服务：进件申请/授信审批/额度/借据/还款/抵押/贷后，按业务场景拆子模块（非独立服务，统一由 credit-biz 装配为单一服务，端口 8103）。</description>
 
     <modules>
         <module>omni-bank-service-credit-api</module>
-        <module>omni-bank-service-credit-biz</module>
+        <module>omni-bank-service-credit-boot</module>
+        <module>omni-bank-service-credit-credit</module>
+        <module>omni-bank-service-credit-loan</module>
+        <module>omni-bank-service-credit-repay</module>
+        <module>omni-bank-service-credit-limit</module>
+        <module>omni-bank-service-credit-mortgage</module>
+        <module>omni-bank-service-credit-postloan</module>
     </modules>
 </project>

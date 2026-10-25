@@ -1,0 +1,28 @@
+server:
+  port: 8106
+
+spring:
+  application:
+    name: omni-bank-service-payment
+  profiles:
+    # 环境通过 SPRING_PROFILES_ACTIVE 注入（local / prod），缺省 local
+    active: ${SPRING_PROFILES_ACTIVE:local}
+
+# Dubbo RPC（triple 协议）：服务间调用；注册中心地址在 profile 中按环境配置
+dubbo:
+  application:
+    name: ${spring.application.name}
+  registry:
+    register-mode: instance
+    check: false
+  protocol:
+    name: tri
+    port: 20886
+  consumer:
+    check: false
+
+# TODO 中间件接入清单：
+#  - MySQL + MyBatis-Plus：引入 omni-bank-common-mybatis，补充 datasource 配置
+#  - Redis：引入 omni-bank-common-remote-cache，补充 redis/redisson 配置
+#  - RocketMQ：引入 omni-bank-common-mq，补充 name-server 与 producer group（渠道结果事件）
+#  - 渠道接入：jPOS（ISO 8583）与三方渠道 SDK 按渠道适配器 SPI 逐步引入

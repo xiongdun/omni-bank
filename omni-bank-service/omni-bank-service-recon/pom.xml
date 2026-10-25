@@ -19,6 +19,6 @@
 
     <modules>
         <module>omni-bank-service-recon-api</module>
-        <module>omni-bank-service-recon-biz</module>
+        <module>omni-bank-service-recon-boot</module>
     </modules>
 </project>

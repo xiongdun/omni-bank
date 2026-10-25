@@ -25,7 +25,6 @@
         <module>omni-bank-service-customer</module>
         <module>omni-bank-service-product</module>
         <module>omni-bank-service-credit</module>
-        <module>omni-bank-service-loan</module>
         <module>omni-bank-service-accounting</module>
         <module>omni-bank-service-payment</module>
         <module>omni-bank-service-recon</module>

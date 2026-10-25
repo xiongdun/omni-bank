@@ -1,0 +1,7 @@
+# 生产/联调环境：注册发现开启，地址由环境变量注入
+spring:
+  cloud:
+    nacos:
+      discovery:
+        enabled: ${NACOS_ENABLED:true}
+        server-addr: ${NACOS_SERVER_ADDR:127.0.0.1:8848}

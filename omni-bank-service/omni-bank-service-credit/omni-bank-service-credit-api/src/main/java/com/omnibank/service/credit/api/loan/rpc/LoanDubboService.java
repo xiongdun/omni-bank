@@ -1,0 +1,10 @@
+package com.omnibank.service.credit.api.loan.rpc;
+
+/**
+ * 借据场景（loan）Dubbo 服务接口（triple 协议）：其他服务跨域调用只依赖本 api 模块
+ */
+public interface LoanDubboService {
+
+    /** 探活演示：验证 Dubbo 链路 */
+    String ping();
+}

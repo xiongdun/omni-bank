@@ -5,14 +5,14 @@ import lombok.AllArgsConstructor;
 import lombok.Getter;
 
 /**
- * 对账域错误码：号段 16000-16999，按业务补充
+ * 对账域错误码：号段 160001-169999，按业务补充
  */
 @Getter
 @AllArgsConstructor
 public enum ReconErrorCode implements ErrorCode {
 
-    RECON_FILE_NOT_FOUND("16001", "对账文件不存在"),
-    RECON_DIFF_UNRESOLVED("16002", "存在未处理的差错记录");
+    RECON_FILE_NOT_FOUND("160001", "对账文件不存在"),
+    RECON_DIFF_UNRESOLVED("160002", "存在未处理的差错记录");
 
     private final String code;
 

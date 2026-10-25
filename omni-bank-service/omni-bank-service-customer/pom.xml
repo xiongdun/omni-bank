@@ -19,6 +19,6 @@
 
     <modules>
         <module>omni-bank-service-customer-api</module>
-        <module>omni-bank-service-customer-biz</module>
+        <module>omni-bank-service-customer-boot</module>
     </modules>
 </project>

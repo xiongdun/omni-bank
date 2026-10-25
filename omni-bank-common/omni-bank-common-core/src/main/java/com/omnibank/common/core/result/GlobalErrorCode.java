@@ -4,8 +4,8 @@ import lombok.AllArgsConstructor;
 import lombok.Getter;
 
 /**
- * 全局通用错误码：0 成功；4xx 客户端侧错误；5xx 服务端侧错误。
- * 业务模块专属错误码在各自模块中实现 {@link ErrorCode} 扩展，不在此堆叠。
+ * 全局通用错误码：6 位号段，前两位 00 为通用域；000200 成功，0004xx 客户端侧错误，0005xx 服务端侧错误。
+ * 业务模块专属错误码在各自模块中实现 {@link ErrorCode} 扩展（使用各自域号段），不在此堆叠。
  */
 @Getter
 @AllArgsConstructor

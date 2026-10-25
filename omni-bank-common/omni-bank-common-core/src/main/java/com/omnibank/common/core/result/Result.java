@@ -20,7 +20,7 @@ public class Result<T> implements Serializable {
     @Serial
     private static final long serialVersionUID = 1L;
 
-    /** 响应码：0 表示成功，非 0 表示失败 */
+    /** 响应码：000200 表示成功，非 000200 表示失败 */
     private String code;
 
     /** 响应消息 */

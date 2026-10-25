@@ -39,22 +39,31 @@ omni-bank
     ├── omni-bank-common-lock        # 分布式锁：@DistributedLock 注解 + 切面
     └── omni-bank-common-excel       # EasyExcel 导入导出工具
 ├── omni-bank-gateway                # API 网关：统一对外入口（Nacos 发现路由转发 + Sentinel 限流熔断 + 全局跨域）
-└── omni-bank-service                # 业务服务聚合模块（8 大业务域，每域 api + biz 双模块）
+└── omni-bank-service                # 业务服务聚合模块（7 大业务域，每域 api + boot 双模块；信贷域另含 6 个场景子模块）
     ├── omni-bank-service-customer      # 客户域：客户/KYC（8101）
     ├── omni-bank-service-product       # 产品域：信贷产品工厂（8102）
-    ├── omni-bank-service-credit        # 信贷域：进件/审批/借据（8103）
-    ├── omni-bank-service-loan          # 借据域：借据生命周期/还款计划/计息（8104）
+    ├── omni-bank-service-credit        # 信贷域：进件/授信/额度/借据/还款/抵押/贷后（8103，域内按场景拆 6 个子模块：credit/loan/repay/limit/mortgage/postloan）
     ├── omni-bank-service-accounting    # 账务域：会计引擎/总账（8105）
     ├── omni-bank-service-payment       # 支付域：渠道网关/代扣代付（8106）
     ├── omni-bank-service-recon         # 对账域：T+1 对账/差错处理（8107）
     └── omni-bank-service-risk          # 风控域：决策引擎/名单（8108）
 ```
 
-业务服务统一按 **api + biz 双模块**组织：`-api` 放 DTO/域错误码/`{域}DubboService` RPC 接口（其他服务跨域调用只依赖它，版本在 parent 统一纳管），`-biz` 放启动类与实现。每个服务内置 `/{域}/ping` 探活接口，用于联调验证 `网关 /api/{域}/ping → 服务` 链路。业务错误码实行号段制：customer 1xxxx、product 11xxx、credit 12xxx、loan 13xxx、accounting 14xxx、payment 15xxx、recon 16xxx、risk 17xxx。
+业务服务统一按 **api + boot 双模块**组织：`-api` 放 DTO/域错误码/`{域}DubboService` RPC 接口（其他服务跨域调用只依赖它，版本在 parent 统一纳管），`-boot` 为唯一启动器与配置载体。域内复杂业务（如信贷域）再按业务场景拆**场景子模块**（物理 Maven 模块，由 boot 装配为单一服务；域内私有，不进 parent 全局纳管，其他服务只允许依赖对应 api）。业务错误码统一 6 位号段：通用域 `00`（`000200` 成功、`0004xx` 客户端错误、`0005xx` 服务端错误）；业务域/场景前两位为域号——customer `100001-109999`、product `110001-119999`、credit 授信场景 `120001-129999`、loan 借据场景 `130001-139999`（随 credit 服务）、accounting `140001-149999`、payment `150001-159999`、recon `160001-169999`、risk `170001-179999`、repay `180001-189999`、limit `190001-199999`、mortgage `200001-209999`、postloan `210001-219999`。
+
+场景子模块内部采用 **DDD 分层**：`application`（应用服务，用例编排入口）/ `domain`（聚合根/实体/仓储接口/领域服务）/ `infrastructure`（仓储实现、外部适配）；**web 与 rpc 适配层统一收口在 boot**（`adapter.web` / `adapter.rpc`，委托领域模块应用服务），领域模块不依赖 spring-web 与 dubbo。
+
+**出站端口**：跨域调用的 `@DubboReference` 只允许出现在 `outbound` 端口实现中（如 `CustomerGateway`），适配层经端口调用、不直连下游；演示代码以 `@Profile("demo")` 隔离（`SPRING_PROFILES_ACTIVE=demo,local` 启用），相关依赖标 `optional` 保证生产包不携带。
+
+**架构守护**：boot 内置 ArchUnit 测试固化边界——领域模块不依赖 web/servlet/Dubbo、场景间互不依赖、adapter 不得直达 domain、application 不得依赖 infrastructure；随 `mvn test` 执行，违规即构建失败（新增场景需同步扩展 `ArchitectureTest` 场景正则）。
+
+**探活**：统一走 `/actuator/health`（liveness/readiness），不提供手写 ping 接口。
+
+**配置与环境**：`application.yml` 只放公共配置，环境差异拆到 `application-local.yml` / `application-prod.yml`，通过 `SPRING_PROFILES_ACTIVE` 切换（缺省 local）。
 
 **服务间调用统一走 Dubbo RPC**（架构：网关保持 HTTP 转发，服务之间全 Dubbo）：
 
-- 接口契约在各域 api 模块（`{域}DubboService`），biz 侧 `@DubboService` 暴露、调用方 `@DubboReference` 注入
+- 接口契约在各域 api 模块（`{域}DubboService`，域内多场景接口共存），实现统一收口在 boot 的 `adapter.rpc` 以 `@DubboService` 暴露；调用方经 `outbound` 端口封装 `@DubboReference`，适配层不直连下游
 - 协议 triple（HTTP/2），端口 20881-20888 按 customer→risk 顺序分配；注册中心复用 Nacos
 - 无 Nacos 时 `dubbo.registry.check=false` + `dubbo.consumer.check=false` 允许裸启动，调用期失败由全局异常处理兜底
 - 跨域演示：credit 的 `/credit/rpc-ping` 通过 Dubbo 调用 customer（联调需 Nacos + customer 在线）
@@ -154,8 +163,8 @@ mvn install -pl omni-bank-common/omni-bank-common-core
 # 启动网关（默认 8080；本地无 Nacos 时默认关闭注册发现，NACOS_ENABLED=true 打开）
 mvn spring-boot:run -pl omni-bank-gateway
 
-# 启动业务服务（以信贷域为例，端口 8103，内置 /credit/ping 探活）
-mvn spring-boot:run -pl omni-bank-service/omni-bank-service-credit/omni-bank-service-credit-biz
+# 启动业务服务（以信贷域为例，端口 8103；探活统一 /actuator/health）
+mvn spring-boot:run -pl omni-bank-service/omni-bank-service-credit/omni-bank-service-credit-boot
 ```
 
 **网关说明**（`omni-bank-gateway`，统一对外入口）：

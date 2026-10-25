@@ -19,6 +19,6 @@
 
     <modules>
         <module>omni-bank-service-risk-api</module>
-        <module>omni-bank-service-risk-biz</module>
+        <module>omni-bank-service-risk-boot</module>
     </modules>
 </project>

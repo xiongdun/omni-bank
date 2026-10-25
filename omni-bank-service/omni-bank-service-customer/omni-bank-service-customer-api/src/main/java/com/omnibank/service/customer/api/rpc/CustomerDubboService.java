@@ -5,6 +5,8 @@ package com.omnibank.service.customer.api.rpc;
  */
 public interface CustomerDubboService {
 
-    /** 探活演示：验证 Dubbo 链路 */
+    /**
+     * 探活演示：验证 Dubbo 链路
+     */
     String ping();
 }

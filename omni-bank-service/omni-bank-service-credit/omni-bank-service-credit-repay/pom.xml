@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <!-- 场景模块：还款计划/还款执行，自包含 controller/rpc 实现，由 credit-biz 装配为单一服务 -->
+    <parent>
+        <groupId>com.omnibank</groupId>
+        <artifactId>omni-bank-service-credit</artifactId>
+        <version>1.0.0-SNAPSHOT</version>
+    </parent>
+
+    <artifactId>omni-bank-service-credit-repay</artifactId>
+
+    <name>omni-bank-service-credit-repay</name>
+    <description>信贷域·还款场景：还款计划 / 还款执行 / 展期。</description>
+
+    <dependencies>
+        <dependency>
+            <groupId>com.omnibank</groupId>
+            <artifactId>omni-bank-service-credit-api</artifactId>
+        </dependency>
+        <!-- 领域模块不依赖 web/rpc（适配层统一在 biz），应用服务以 Spring Bean 注册 -->
+        <dependency>
+            <groupId>org.springframework</groupId>
+            <artifactId>spring-context</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.projectlombok</groupId>
+            <artifactId>lombok</artifactId>
+            <optional>true</optional>
+        </dependency>
+    </dependencies>
+</project>

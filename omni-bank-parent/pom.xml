@@ -111,11 +111,6 @@
             </dependency>
             <dependency>
                 <groupId>com.omnibank</groupId>
-                <artifactId>omni-bank-service-loan-api</artifactId>
-                <version>${omni-bank.version}</version>
-            </dependency>
-            <dependency>
-                <groupId>com.omnibank</groupId>
                 <artifactId>omni-bank-service-accounting-api</artifactId>
                 <version>${omni-bank.version}</version>
             </dependency>
