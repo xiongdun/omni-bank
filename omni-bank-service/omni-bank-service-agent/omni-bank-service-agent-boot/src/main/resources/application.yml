@@ -21,6 +21,49 @@ dubbo:
   consumer:
     check: false
 
+# 对公信贷尽调域
+omni:
+  dd:
+    # Outbox 发布器扫描间隔与最大重试次数
+    outbox:
+      scan-interval-ms: 1000
+      max-retries: 5
+    # 业务场景识别规则：产品编码 / 贷款用途关键词 -> 业务类型
+    # 规则口径待银行业务部门确认，确认前仅作辅助分类，低置信度一律标记待确认
+    scenario:
+      confidence-threshold: 0.60
+      unmatched-confidence: 0.30
+      rules:
+        - name: 流动资金贷款-原材料采购
+          product-codes:
+            - CORPORATE_WORKING_CAPITAL
+          purpose-keywords:
+            - 原材料
+            - 采购
+            - 备货
+          business-type: WORKING_CAPITAL
+          sub-scenario: RAW_MATERIAL_PURCHASE
+          confidence: 0.90
+        - name: 固定资产贷款
+          product-codes:
+            - CORPORATE_FIXED_ASSET
+          purpose-keywords:
+            - 厂房
+            - 设备
+            - 项目建设
+          business-type: FIXED_ASSET
+          sub-scenario: EQUIPMENT_OR_PLANT
+          confidence: 0.88
+        - name: 贸易融资
+          product-codes:
+            - CORPORATE_TRADE_FINANCE
+          purpose-keywords:
+            - 信用证
+            - 保函
+            - 进出口
+          business-type: TRADE_FINANCE
+          sub-scenario: TRADE_SETTLEMENT
+          confidence: 0.85
+
 # TODO 中间件接入清单：
 #  - 大模型调用：模型网关地址 / API Key 经环境变量注入（预留）
-#  - 流式响应：SSE / WebSocket（预留）

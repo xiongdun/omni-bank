@@ -1,0 +1,38 @@
+spring:
+  datasource:
+    driver-class-name: org.h2.Driver
+    url: jdbc:h2:mem:omni_dd;MODE=MySQL;DATABASE_TO_LOWER=TRUE;DB_CLOSE_DELAY=-1
+    username: sa
+    password:
+  sql:
+    init:
+      mode: always
+      schema-locations: classpath:dd-schema-h2.sql
+  cloud:
+    nacos:
+      discovery:
+        enabled: false
+
+dubbo:
+  registry:
+    address: N/A
+
+omni:
+  dd:
+    outbox:
+      scan-interval-ms: 1000
+      max-retries: 5
+    scenario:
+      confidence-threshold: 0.60
+      unmatched-confidence: 0.30
+      rules:
+        - name: 流动资金贷款-原材料采购
+          product-codes:
+            - CORPORATE_WORKING_CAPITAL
+          purpose-keywords:
+            - 原材料
+            - 采购
+            - 备货
+          business-type: WORKING_CAPITAL
+          sub-scenario: RAW_MATERIAL_PURCHASE
+          confidence: 0.90

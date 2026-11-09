@@ -1,0 +1,173 @@
+package com.omnibank.service.agent.dd;
+
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
+
+import com.omnibank.common.core.exception.BizException;
+import com.omnibank.service.agent.dd.dto.scenario.ScenarioVO;
+import com.omnibank.service.agent.dd.dto.task.CreateTaskReq;
+import com.omnibank.service.agent.dd.dto.task.EnterpriseReq;
+import com.omnibank.service.agent.dd.dto.task.LoanApplicationReq;
+import com.omnibank.service.agent.dd.dto.task.TaskContextVO;
+import com.omnibank.service.agent.dd.dto.task.TaskCreateVO;
+import com.omnibank.service.agent.dd.dto.task.TaskDetailVO;
+import com.omnibank.service.agent.dd.dto.task.TaskStatusVO;
+import com.omnibank.service.agent.dd.entity.DdOutboxEvent;
+import com.omnibank.service.agent.dd.entity.DdTask;
+import com.omnibank.service.agent.dd.mapper.DdTaskMapper;
+import com.omnibank.service.agent.dd.service.DdOutboxPublisher;
+import com.omnibank.service.agent.dd.service.DdOutboxService;
+import com.omnibank.service.agent.dd.service.DdScenarioService;
+import com.omnibank.service.agent.dd.service.DdTaskService;
+import java.math.BigDecimal;
+import java.util.List;
+import org.junit.jupiter.api.Test;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.test.context.ActiveProfiles;
+import org.springframework.transaction.annotation.Transactional;
+
+/**
+ * 模块一主链路集成测试：真实 SQL（H2 MySQL 模式）、事务、Outbox、场景识别、上下文组装
+ */
+@SpringBootTest(classes = DdTestApplication.class)
+@ActiveProfiles("h2")
+@Transactional
+class DdTaskFlowIntegrationTest {
+
+    @Autowired
+    private DdTaskService taskService;
+
+    @Autowired
+    private DdScenarioService scenarioService;
+
+    @Autowired
+    private DdOutboxService outboxService;
+
+    @Autowired
+    private DdOutboxPublisher outboxPublisher;
+
+    @Autowired
+    private DdTaskMapper taskMapper;
+
+    @Test
+    void 创建任务时复用企业主体并保存申请快照() {
+        TaskCreateVO first = taskService.create(req("91360000TEST000001", "江西测试科技有限公司",
+                "CORPORATE_WORKING_CAPITAL", "采购原材料", "MORTGAGE"));
+        TaskDetailVO detail = taskService.detail(first.getTaskId());
+
+        assertThat(first.getTaskNo()).startsWith("DD");
+        assertThat(detail.getTaskStatus()).isEqualTo("DRAFT");
+        assertThat(detail.getEnterprise().getCreditCode()).isEqualTo("91360000TEST000001");
+        assertThat(detail.getApplication().getApplyAmount()).isEqualByComparingTo(new BigDecimal("5000000.00"));
+        assertThat(detail.getLatestScenario()).isNull();
+
+        TaskCreateVO second = taskService.create(req("91360000TEST000001", "江西测试科技有限公司",
+                "CORPORATE_WORKING_CAPITAL", "采购原材料", "MORTGAGE"));
+        assertThat(taskService.detail(second.getTaskId()).getEnterprise().getId())
+                .isEqualTo(detail.getEnterprise().getId());
+    }
+
+    @Test
+    void 提交任务后Outbox事件驱动场景识别并停在生成计划阶段() {
+        TaskCreateVO created = taskService.create(req("91360000TEST000002", "江西测试科技有限公司",
+                "CORPORATE_WORKING_CAPITAL", "采购原材料", "MORTGAGE"));
+
+        TaskStatusVO submitted = taskService.submit(created.getTaskId());
+        assertThat(submitted.getTaskStatus()).isEqualTo("INITIALIZING");
+        assertThatThrownBy(() -> taskService.submit(created.getTaskId()))
+                .isInstanceOf(BizException.class)
+                .hasMessageContaining("仅草稿状态");
+
+        List<DdOutboxEvent> pending = outboxService.fetchPending(10);
+        assertThat(pending).anyMatch(e -> e.getAggregateId().equals(created.getTaskId()));
+
+        outboxPublisher.publishPending();
+
+        TaskStatusVO status = taskService.status(created.getTaskId());
+        assertThat(status.getTaskStatus()).isEqualTo("PLANNING");
+        assertThat(status.getProgress()).isEqualTo(30);
+
+        ScenarioVO scenario = scenarioService.latest(created.getTaskId());
+        assertThat(scenario.getScenarioVersion()).isEqualTo(1);
+        assertThat(scenario.getBusinessType()).isEqualTo("WORKING_CAPITAL");
+        assertThat(scenario.getIdentifyStatus()).isEqualTo("IDENTIFIED");
+        assertThat(scenario.getConfidence()).isEqualByComparingTo(new BigDecimal("0.90"));
+        assertThat(scenario.getGuaranteeTypes()).containsExactly("MORTGAGE");
+
+        TaskContextVO context = taskService.context(created.getTaskId());
+        assertThat(context.getCreditCode()).isEqualTo("91360000TEST000002");
+        assertThat(context.getLoanApplication().getLoanPurpose()).isEqualTo("采购原材料");
+        assertThat(context.getBusinessScenario().getBusinessType()).isEqualTo("WORKING_CAPITAL");
+        assertThat(context.getContextVersion()).isEqualTo(1);
+        assertThat(context.getEvidenceIds()).isEmpty();
+    }
+
+    @Test
+    void 重复投递同一事件不会重复分析() {
+        TaskCreateVO created = taskService.create(req("91360000TEST000003", "江西测试科技有限公司",
+                "CORPORATE_WORKING_CAPITAL", "采购原材料", "MORTGAGE"));
+        taskService.submit(created.getTaskId());
+        outboxPublisher.publishPending();
+
+        DdTask afterFirst = taskMapper.selectById(created.getTaskId());
+        int analysisVersion = afterFirst.getAnalysisVersion();
+
+        outboxPublisher.publishPending();
+        DdTask afterSecond = taskMapper.selectById(created.getTaskId());
+
+        assertThat(afterSecond.getTaskStatus()).isEqualTo("PLANNING");
+        assertThat(afterSecond.getAnalysisVersion()).isEqualTo(analysisVersion);
+        assertThat(afterSecond.getVersion()).isEqualTo(afterFirst.getVersion());
+    }
+
+    @Test
+    void 规则未命中时场景标记待确认() {
+        TaskCreateVO created = taskService.create(req("91360000TEST000004", "江西测试科技有限公司",
+                "UNKNOWN_PRODUCT", "补充日常经营周转", "MORTGAGE"));
+        taskService.submit(created.getTaskId());
+        outboxPublisher.publishPending();
+
+        ScenarioVO scenario = scenarioService.latest(created.getTaskId());
+        assertThat(scenario.getBusinessType()).isEqualTo("OTHER");
+        assertThat(scenario.getIdentifyStatus()).isEqualTo("NEEDS_CONFIRMATION");
+        assertThat(scenario.getUncertainItems()).isNotEmpty();
+        assertThat(taskService.status(created.getTaskId()).getTaskStatus()).isEqualTo("PLANNING");
+    }
+
+    @Test
+    void 取消后不可再提交() {
+        TaskCreateVO created = taskService.create(req("91360000TEST000005", "江西测试科技有限公司",
+                "CORPORATE_WORKING_CAPITAL", "采购原材料", "MORTGAGE"));
+
+        taskService.cancel(created.getTaskId());
+        assertThat(taskService.status(created.getTaskId()).getTaskStatus()).isEqualTo("CANCELLED");
+        assertThatThrownBy(() -> taskService.cancel(created.getTaskId()))
+                .isInstanceOf(BizException.class)
+                .hasMessageContaining("不可取消");
+        assertThatThrownBy(() -> taskService.submit(created.getTaskId()))
+                .isInstanceOf(BizException.class);
+    }
+
+    private CreateTaskReq req(String creditCode, String enterpriseName, String productCode,
+                              String loanPurpose, String guaranteeType) {
+        EnterpriseReq enterprise = new EnterpriseReq();
+        enterprise.setCreditCode(creditCode);
+        enterprise.setEnterpriseName(enterpriseName);
+
+        LoanApplicationReq application = new LoanApplicationReq();
+        application.setApplicationNo("APP" + creditCode.substring(creditCode.length() - 6));
+        application.setProductCode(productCode);
+        application.setProductName("流动资金贷款");
+        application.setApplyAmount(new BigDecimal("5000000.00"));
+        application.setApplyTerm(12);
+        application.setTermUnit("MONTH");
+        application.setLoanPurpose(loanPurpose);
+        application.setGuaranteeType(guaranteeType);
+
+        CreateTaskReq req = new CreateTaskReq();
+        req.setEnterprise(enterprise);
+        req.setApplication(application);
+        return req;
+    }
+}
