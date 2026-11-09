@@ -1,16 +1,18 @@
 package com.omnibank.service.system.service.menu;
 
+import com.baomidou.mybatisplus.spring.service.IService;
 import com.omnibank.service.system.dto.menu.MenuSaveReq;
 import com.omnibank.service.system.entity.SysMenu;
 
 import java.util.List;
 
 /**
- * 菜单/权限点服务：树查询/增删改
+ * 菜单/权限点服务：树查询/增删改（MyBatis-Plus IService 体系）
  */
-public interface SysMenuService {
+public interface SysMenuService extends IService<SysMenu> {
 
-    /** 全量菜单树（管理端维护用，平铺由前端组树亦可，此处直接返回平铺列表） */
+    /** 全量菜单列表（按父级+顺序排序，前端组树） */
+    @Override
     List<SysMenu> list();
 
     /** 按父级查询子菜单 */

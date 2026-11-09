@@ -1,0 +1,26 @@
+server:
+  port: 8109
+
+spring:
+  application:
+    name: omni-bank-service-agent
+  profiles:
+    # 环境通过 SPRING_PROFILES_ACTIVE 注入（local / prod），缺省 local
+    active: ${SPRING_PROFILES_ACTIVE:local}
+
+# Dubbo RPC（triple 协议）：服务间调用；注册中心地址在 profile 中按环境配置
+dubbo:
+  application:
+    name: ${spring.application.name}
+  registry:
+    register-mode: instance
+    check: false
+  protocol:
+    name: tri
+    port: 20889
+  consumer:
+    check: false
+
+# TODO 中间件接入清单：
+#  - 大模型调用：模型网关地址 / API Key 经环境变量注入（预留）
+#  - 流式响应：SSE / WebSocket（预留）

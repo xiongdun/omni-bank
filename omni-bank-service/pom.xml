@@ -30,5 +30,6 @@
         <module>omni-bank-service-recon</module>
         <module>omni-bank-service-risk</module>
         <module>omni-bank-service-system</module>
+        <module>omni-bank-service-agent</module>
     </modules>
 </project>

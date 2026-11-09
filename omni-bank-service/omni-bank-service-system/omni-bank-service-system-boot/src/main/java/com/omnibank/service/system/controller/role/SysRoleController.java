@@ -1,8 +1,9 @@
 package com.omnibank.service.system.controller.role;
 
 import cn.dev33.satoken.annotation.SaCheckPermission;
-import com.baomidou.mybatisplus.core.metadata.IPage;
+import com.omnibank.common.core.page.PageResult;
 import com.omnibank.common.core.result.Result;
+import com.omnibank.common.mybatis.util.PageResults;
 import com.omnibank.service.system.dto.role.RoleCreateReq;
 import com.omnibank.service.system.dto.role.RoleQueryReq;
 import com.omnibank.service.system.dto.role.RoleUpdateReq;
@@ -32,8 +33,8 @@ public class SysRoleController {
     /** 分页查询角色 */
     @SaCheckPermission("sys:role:list")
     @GetMapping("/page")
-    public Result<IPage<SysRole>> page(RoleQueryReq req) {
-        return Result.success(roleService.page(req));
+    public Result<PageResult<SysRole>> page(RoleQueryReq req) {
+        return Result.success(PageResults.from(roleService.page(req)));
     }
 
     /** 全部启用角色（下拉选择用，登录即可） */

@@ -1,6 +1,6 @@
 package com.omnibank.service.system.dto.role;
 
-import com.omnibank.service.system.dto.PageQuery;
+import com.omnibank.common.core.page.PageQuery;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
 

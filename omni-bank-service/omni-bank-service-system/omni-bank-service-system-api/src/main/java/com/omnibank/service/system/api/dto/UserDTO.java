@@ -1,15 +1,17 @@
 package com.omnibank.service.system.api.dto;
 
+import com.omnibank.common.core.dto.BaseDTO;
 import lombok.Data;
+import lombok.EqualsAndHashCode;
 
 import java.io.Serial;
-import java.io.Serializable;
 
 /**
  * 用户信息 DTO（跨服务传输）
  */
 @Data
-public class UserDTO implements Serializable {
+@EqualsAndHashCode(callSuper = true)
+public class UserDTO extends BaseDTO {
 
     @Serial
     private static final long serialVersionUID = 1L;

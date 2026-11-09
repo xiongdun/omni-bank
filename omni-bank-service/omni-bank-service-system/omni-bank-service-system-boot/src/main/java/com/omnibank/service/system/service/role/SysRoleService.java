@@ -1,6 +1,7 @@
 package com.omnibank.service.system.service.role;
 
 import com.baomidou.mybatisplus.core.metadata.IPage;
+import com.baomidou.mybatisplus.spring.service.IService;
 import com.omnibank.service.system.dto.role.RoleCreateReq;
 import com.omnibank.service.system.dto.role.RoleQueryReq;
 import com.omnibank.service.system.dto.role.RoleUpdateReq;
@@ -9,9 +10,9 @@ import com.omnibank.service.system.entity.SysRole;
 import java.util.List;
 
 /**
- * 角色服务：分页/增删改/菜单授权/用户权限查询
+ * 角色服务：分页/增删改/菜单授权/用户权限查询（MyBatis-Plus IService 体系）
  */
-public interface SysRoleService {
+public interface SysRoleService extends IService<SysRole> {
 
     /** 分页查询角色 */
     IPage<SysRole> page(RoleQueryReq req);
@@ -19,7 +20,8 @@ public interface SysRoleService {
     /** 查询全部启用角色（下拉用） */
     List<SysRole> listAll();
 
-    /** 按 ID 查询角色 */
+    /** 按 ID 查询角色（不存在时抛业务异常） */
+
     SysRole getById(Long id);
 
     /** 新增角色（含菜单授权） */

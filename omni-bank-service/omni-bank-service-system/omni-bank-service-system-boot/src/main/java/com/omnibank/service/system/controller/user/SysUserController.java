@@ -1,8 +1,9 @@
 package com.omnibank.service.system.controller.user;
 
 import cn.dev33.satoken.annotation.SaCheckPermission;
-import com.baomidou.mybatisplus.core.metadata.IPage;
+import com.omnibank.common.core.page.PageResult;
 import com.omnibank.common.core.result.Result;
+import com.omnibank.common.mybatis.util.PageResults;
 import com.omnibank.service.system.dto.user.UserCreateReq;
 import com.omnibank.service.system.dto.user.UserQueryReq;
 import com.omnibank.service.system.dto.user.UserUpdateReq;
@@ -32,8 +33,8 @@ public class SysUserController {
     /** 分页查询用户 */
     @SaCheckPermission("sys:user:list")
     @GetMapping("/page")
-    public Result<IPage<SysUser>> page(UserQueryReq req) {
-        return Result.success(userService.page(req));
+    public Result<PageResult<SysUser>> page(UserQueryReq req) {
+        return Result.success(PageResults.from(userService.page(req)));
     }
 
     /** 用户详情 */

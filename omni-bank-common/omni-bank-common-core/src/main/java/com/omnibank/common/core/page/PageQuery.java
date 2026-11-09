@@ -1,4 +1,4 @@
-package com.omnibank.service.system.dto;
+package com.omnibank.common.core.page;
 
 import lombok.Data;
 
@@ -6,7 +6,7 @@ import java.io.Serial;
 import java.io.Serializable;
 
 /**
- * 分页查询基类：current 从 1 开始
+ * 分页查询基类：current 从 1 开始；size 默认 10、上限 100（防大分页拖垮数据库）
  */
 @Data
 public class PageQuery implements Serializable {

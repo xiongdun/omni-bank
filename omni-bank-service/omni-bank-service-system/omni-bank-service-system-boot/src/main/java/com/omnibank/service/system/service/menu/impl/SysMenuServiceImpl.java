@@ -1,6 +1,5 @@
 package com.omnibank.service.system.service.menu.impl;
 
-import com.baomidou.mybatisplus.core.toolkit.Wrappers;
 import com.baomidou.mybatisplus.spring.service.impl.ServiceImpl;
 import com.omnibank.common.core.exception.BizException;
 import com.omnibank.common.core.result.GlobalErrorCode;
@@ -9,35 +8,33 @@ import com.omnibank.service.system.dto.menu.MenuSaveReq;
 import com.omnibank.service.system.entity.SysMenu;
 import com.omnibank.service.system.mapper.SysMenuMapper;
 import com.omnibank.service.system.service.menu.SysMenuService;
-import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
 
 /**
- * 菜单/权限点服务实现。
+ * 菜单/权限点服务实现（MyBatis-Plus ServiceImpl 体系，链式 lambdaQuery）
  */
 @Service
-@RequiredArgsConstructor
 public class SysMenuServiceImpl extends ServiceImpl<SysMenuMapper, SysMenu> implements SysMenuService {
 
     /** 按钮类型 */
     private static final String MENU_TYPE_BUTTON = "F";
 
-    private final SysMenuMapper menuMapper;
-
     @Override
     public List<SysMenu> list() {
-        return menuMapper.selectList(Wrappers.<SysMenu>lambdaQuery()
+        return lambdaQuery()
                 .orderByAsc(SysMenu::getParentId)
-                .orderByAsc(SysMenu::getSort));
+                .orderByAsc(SysMenu::getSort)
+                .list();
     }
 
     @Override
     public List<SysMenu> listByParentId(Long parentId) {
-        return menuMapper.selectList(Wrappers.<SysMenu>lambdaQuery()
+        return lambdaQuery()
                 .eq(SysMenu::getParentId, parentId)
-                .orderByAsc(SysMenu::getSort));
+                .orderByAsc(SysMenu::getSort)
+                .list();
     }
 
     @Override
@@ -60,22 +57,19 @@ public class SysMenuServiceImpl extends ServiceImpl<SysMenuMapper, SysMenu> impl
         menu.setVisible(req.getVisible());
         menu.setStatus(req.getStatus());
         if (menu.getId() == null) {
-            menuMapper.insert(menu);
+            save(menu);
         } else {
-            if (menuMapper.selectById(menu.getId()) == null) {
-                throw new BizException(SysErrorCode.MENU_NOT_FOUND);
-            }
-            menuMapper.updateById(menu);
+            getById(menu.getId());
+            updateById(menu);
         }
     }
 
     @Override
     public void delete(Long id) {
-        Long children = menuMapper.selectCount(Wrappers.<SysMenu>lambdaQuery()
-                .eq(SysMenu::getParentId, id));
+        Long children = lambdaQuery().eq(SysMenu::getParentId, id).count();
         if (children > 0) {
             throw new BizException(SysErrorCode.MENU_HAS_CHILDREN);
         }
-        menuMapper.deleteById(id);
+        removeById(id);
     }
 }

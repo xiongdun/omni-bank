@@ -13,9 +13,19 @@
     <artifactId>omni-bank-common-core</artifactId>
 
     <name>omni-bank-common-core</name>
-    <description>核心基础包：统一响应体、错误码体系、业务异常。被其他公共模块与业务模块共同依赖，保持零框架依赖。</description>
+    <description>核心基础包：统一响应体、错误码体系、业务异常、用户上下文、分页体系、校验分组、枚举/DTO 基类。被其他公共模块与业务模块共同依赖，仅依赖 TTL 与 jackson-annotations 两个轻量库。</description>
 
     <dependencies>
+        <!-- 用户上下文经 TransmittableThreadLocal 传递（配合 common-threadpool 的 TTL 装饰器） -->
+        <dependency>
+            <groupId>com.alibaba</groupId>
+            <artifactId>transmittable-thread-local</artifactId>
+        </dependency>
+        <!-- BaseEnum 序列化标注（@JsonValue），仅注解不引 databind -->
+        <dependency>
+            <groupId>com.fasterxml.jackson.core</groupId>
+            <artifactId>jackson-annotations</artifactId>
+        </dependency>
         <dependency>
             <groupId>org.projectlombok</groupId>
             <artifactId>lombok</artifactId>

@@ -29,9 +29,9 @@ omni-bank
 ├── omni-bank-dependencies           # 基础 BOM：三方依赖版本唯一来源（无 parent，可被任意工程 import）
 ├── omni-bank-parent                 # 父 POM：所有模块的 parent（编译配置/内部构件版本/私服发布）
 ├── omni-bank-common                 # 公共组件聚合模块（按需引用子模块，不直接依赖本模块）
-    ├── omni-bank-common-core        # 统一响应体 Result / 错误码体系 / 业务异常 BizException
-    ├── omni-bank-common-web         # 全局异常处理（业务/参数校验/兜底 → 统一响应）
-    ├── omni-bank-common-mybatis     # MyBatis-Plus 支撑：分页插件 / BaseEntity（雪花 ID + 审计字段填充）
+    ├── omni-bank-common-core        # 统一响应体 Result / 错误码体系 / 业务异常 BizException / 用户上下文 UserContext（TTL）/ 分页体系 PageQuery+PageResult / 基类四件套 BaseDTO+BaseVO（core）+BaseEntity（mybatis）/ ValidGroup 校验分组 / BaseEnum 枚举基接口（@JsonValue 序列化为 code）
+    ├── omni-bank-common-web         # 全局异常处理（业务/参数校验/兜底 → 统一响应）/ BaseController（取当前操作人）/ BaseEnumJacksonModule（请求体 code 反序列化回枚举，自动装配）
+    ├── omni-bank-common-mybatis     # MyBatis-Plus 支撑：分页插件 / BaseEntity（雪花 ID + 审计字段填充，操作人自动取 UserContext）/ PageResults（IPage → PageResult 转换）
     ├── omni-bank-common-local-cache # Caffeine 本地缓存封装
     ├── omni-bank-common-remote-cache# Redisson 远程缓存封装
     ├── omni-bank-common-mq          # RocketMQ 消息发送封装
@@ -48,10 +48,11 @@ omni-bank
     ├── omni-bank-service-payment       # 支付域：渠道网关/代扣代付（8106）
     ├── omni-bank-service-recon         # 对账域：T+1 对账/差错处理（8107）
     ├── omni-bank-service-risk          # 风控域：决策引擎/名单（8108）
-    └── omni-bank-service-system        # 系统管理域：认证(Sa-Token)/用户/角色/菜单权限/数据权限/机构部门/岗位/字典/参数/日志/通知/附件（8104，MVC 包结构）
+    ├── omni-bank-service-system        # 系统管理域：认证(Sa-Token)/用户/角色/菜单权限/数据权限/机构部门/岗位/字典/参数/日志/通知/附件（8104，MVC 包结构）
+    └── omni-bank-service-agent         # AI 智能体域：智能体定义/会话/消息（8109，MVC 包结构，同 system 组织方式）
 ```
 
-业务服务统一按 **api + boot 双模块**组织：`-api` 放 DTO/域错误码/`{域}DubboService` RPC 接口（其他服务跨域调用只依赖它，版本在 parent 统一纳管），`-boot` 为唯一启动器与配置载体。域内复杂业务（如信贷域）再按业务场景拆**场景子模块**（物理 Maven 模块，由 boot 装配为单一服务；域内私有，不进 parent 全局纳管，其他服务只允许依赖对应 api）。业务错误码统一 6 位号段：通用域 `00`（`000200` 成功、`0004xx` 客户端错误、`0005xx` 服务端错误）；业务域/场景前两位为域号——customer `100001-109999`、product `110001-119999`、credit 授信场景 `120001-129999`、loan 借据场景 `130001-139999`（随 credit 服务）、accounting `140001-149999`、payment `150001-159999`、recon `160001-169999`、risk `170001-179999`、repay `180001-189999`、limit `190001-199999`、mortgage `200001-209999`、postloan `210001-219999`、system `220001-229999`。
+业务服务统一按 **api + boot 双模块**组织：`-api` 放 DTO/域错误码/`{域}DubboService` RPC 接口（其他服务跨域调用只依赖它，版本在 parent 统一纳管），`-boot` 为唯一启动器与配置载体。域内复杂业务（如信贷域）再按业务场景拆**场景子模块**（物理 Maven 模块，由 boot 装配为单一服务；域内私有，不进 parent 全局纳管，其他服务只允许依赖对应 api）。业务错误码统一 6 位号段：通用域 `00`（`000200` 成功、`0004xx` 客户端错误、`0005xx` 服务端错误）；业务域/场景前两位为域号——customer `100001-109999`、product `110001-119999`、credit 授信场景 `120001-129999`、loan 借据场景 `130001-139999`（随 credit 服务）、accounting `140001-149999`、payment `150001-159999`、recon `160001-169999`、risk `170001-179999`、repay `180001-189999`、limit `190001-199999`、mortgage `200001-209999`、postloan `210001-219999`、system `220001-229999`、agent `230001-239999`。
 
 场景子模块内部采用 **DDD 分层**：`application`（应用服务，用例编排入口）/ `domain`（聚合根/实体/仓储接口/领域服务）/ `infrastructure`（仓储实现、外部适配）；**web 与 rpc 适配层统一收口在 boot**（`adapter.web` / `adapter.rpc`，委托领域模块应用服务），领域模块不依赖 spring-web 与 dubbo。
 
@@ -66,7 +67,7 @@ omni-bank
 **服务间调用统一走 Dubbo RPC**（架构：网关保持 HTTP 转发，服务之间全 Dubbo）：
 
 - 接口契约在各域 api 模块（`{域}DubboService`，域内多场景接口共存），实现统一收口在 boot 的 `adapter.rpc` 以 `@DubboService` 暴露；调用方经 `outbound` 端口封装 `@DubboReference`，适配层不直连下游
-- 协议 triple（HTTP/2），端口 20881-20888 按 customer→risk 顺序分配；注册中心复用 Nacos
+- 协议 triple（HTTP/2），端口 20881-20889 按域顺序分配（customer→agent，system 20884、agent 20889）；注册中心复用 Nacos
 - 无 Nacos 时 `dubbo.registry.check=false` + `dubbo.consumer.check=false` 允许裸启动，调用期失败由全局异常处理兜底
 - 跨域演示：credit 的 `/credit/rpc-ping` 通过 Dubbo 调用 customer（联调需 Nacos + customer 在线）
 
@@ -171,7 +172,7 @@ mvn spring-boot:run -pl omni-bank-service/omni-bank-service-credit/omni-bank-ser
 
 **网关说明**（`omni-bank-gateway`，统一对外入口）：
 
-- **路由转发**：Nacos 服务发现自动路由（`discovery.locator`，`/{服务名}/**` → `lb://{服务名}`）+ 8 条显式业务路由（`/api/{域}/**` → `lb://omni-bank-service-{域}`，`StripPrefix=1` 去前缀），新服务在 `application.yml` 按模板登记
+- **路由转发**：Nacos 服务发现自动路由（`discovery.locator`，`/{服务名}/**` → `lb://{服务名}`）+ 显式业务路由（`/api/{域}/**` → `lb://omni-bank-service-{域}`，`StripPrefix=1` 去前缀）；当前已登记 customer/product/credit/accounting/payment/recon/risk 共 7 条，**system 与 agent 待登记**，新服务在 `application.yml` 按模板补充
 - **限流熔断**：Sentinel（路由维度 / API 分组维度），兜底响应统一为 Result 结构、HTTP 429；规则由 Sentinel Dashboard（默认 `127.0.0.1:8858`）下发，持久化后续接 Nacos 数据源
 - **当前阶段**：本地无 Nacos 时注册发现默认关闭（`NACOS_ENABLED=true` 开启），网关可独立启动；下游服务不存在时转发返回 503 属预期
 
@@ -197,6 +198,7 @@ mvn deploy \
 - **错误码规范**：`0/2xx` 风格全局码在 `GlobalErrorCode`；业务模块错误码在各自模块实现 `ErrorCode` 接口
 - 新增公共组件以 `omni-bank-common-xxx` 子模块形式扩展，并在 parent `dependencyManagement` 登记
 - 提示：Spring Boot 3.5.x 的开源维护窗口已于 2026 年中结束，长期安全补丁需商业订阅；后续可评估 Boot 4.1 + SCA 2025.1.0.0 的整体升级
+- **协作文档分工**：[AGENTS.md](AGENTS.md) 为技术规范唯一事实源（分层边界/编码规范/协作流程/已知坑），[REQUIREMENTS.md](REQUIREMENTS.md) 为业务需求与范围，[CLAUDE.md](CLAUDE.md) 为行为准则与硬约束摘要；改模块/端口/错误码/公共组件/表结构须同步 AGENTS.md 与本文
 
 ## 路线图
 

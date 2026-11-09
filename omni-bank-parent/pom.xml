@@ -139,6 +139,11 @@
                 <artifactId>omni-bank-service-system-api</artifactId>
                 <version>${omni-bank.version}</version>
             </dependency>
+            <dependency>
+                <groupId>com.omnibank</groupId>
+                <artifactId>omni-bank-service-agent-api</artifactId>
+                <version>${omni-bank.version}</version>
+            </dependency>
         </dependencies>
     </dependencyManagement>
 

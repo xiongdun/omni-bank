@@ -1,20 +1,24 @@
 package com.omnibank.service.system.service.user;
 
 import com.baomidou.mybatisplus.core.metadata.IPage;
+import com.baomidou.mybatisplus.spring.service.IService;
 import com.omnibank.service.system.dto.user.UserCreateReq;
 import com.omnibank.service.system.dto.user.UserQueryReq;
 import com.omnibank.service.system.dto.user.UserUpdateReq;
 import com.omnibank.service.system.entity.SysUser;
 
+import java.util.List;
+
 /**
- * 用户服务：分页/增删改/角色岗位分配/重置密码
+ * 用户服务：分页/增删改/角色岗位分配/重置密码（MyBatis-Plus IService 体系）
  */
-public interface SysUserService {
+public interface SysUserService extends IService<SysUser> {
 
     /** 分页查询用户 */
     IPage<SysUser> page(UserQueryReq req);
 
-    /** 按 ID 查询用户 */
+    /** 按 ID 查询用户（不存在时抛业务异常） */
+
     SysUser getById(Long id);
 
     /** 按登录账号查询用户 */
@@ -33,5 +37,5 @@ public interface SysUserService {
     void resetPassword(Long id);
 
     /** 全量覆盖用户角色 */
-    void assignRoles(Long userId, java.util.List<Long> roleIds);
+    void assignRoles(Long userId, List<Long> roleIds);
 }
