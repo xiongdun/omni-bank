@@ -4,14 +4,17 @@ import com.omnibank.common.core.page.PageResult;
 import com.omnibank.common.core.result.Result;
 import com.omnibank.common.mybatis.util.PageResults;
 import com.omnibank.service.agent.dd.config.DdSseRegistry;
+import com.omnibank.service.agent.dd.dto.evidence.EvidenceListVO;
+import com.omnibank.service.agent.dd.dto.evidence.EvidenceQueryReq;
 import com.omnibank.service.agent.dd.dto.scenario.ScenarioVO;
 import com.omnibank.service.agent.dd.dto.task.CreateTaskReq;
 import com.omnibank.service.agent.dd.dto.task.TaskContextVO;
 import com.omnibank.service.agent.dd.dto.task.TaskCreateVO;
 import com.omnibank.service.agent.dd.dto.task.TaskDetailVO;
+import com.omnibank.service.agent.dd.dto.task.TaskListVO;
 import com.omnibank.service.agent.dd.dto.task.TaskQueryReq;
 import com.omnibank.service.agent.dd.dto.task.TaskStatusVO;
-import com.omnibank.service.agent.dd.entity.DdTask;
+import com.omnibank.service.agent.dd.service.DdEvidenceService;
 import com.omnibank.service.agent.dd.service.DdScenarioService;
 import com.omnibank.service.agent.dd.service.DdTaskService;
 import jakarta.validation.Valid;
@@ -40,6 +43,8 @@ public class DdTaskController {
 
     private final DdScenarioService scenarioService;
 
+    private final DdEvidenceService evidenceService;
+
     private final DdSseRegistry sseRegistry;
 
     /** 创建尽调任务（草稿） */
@@ -50,7 +55,7 @@ public class DdTaskController {
 
     /** 任务分页 */
     @GetMapping
-    public Result<PageResult<DdTask>> page(TaskQueryReq req) {
+    public Result<PageResult<TaskListVO>> page(TaskQueryReq req) {
         return Result.success(PageResults.from(taskService.page(req)));
     }
 
@@ -108,5 +113,11 @@ public class DdTaskController {
     @PostMapping("/{taskId}/scenario/reidentify")
     public Result<ScenarioVO> reidentify(@PathVariable Long taskId) {
         return Result.success(scenarioService.reidentify(taskId));
+    }
+
+    /** 任务证据分页 */
+    @GetMapping("/{taskId}/evidences")
+    public Result<PageResult<EvidenceListVO>> evidences(@PathVariable Long taskId, EvidenceQueryReq req) {
+        return Result.success(PageResults.from(evidenceService.page(taskId, req)));
     }
 }

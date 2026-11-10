@@ -2,7 +2,11 @@ package com.omnibank.service.agent.dd;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.request;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.omnibank.common.core.exception.BizException;
 import com.omnibank.service.agent.dd.dto.scenario.ScenarioVO;
 import com.omnibank.service.agent.dd.dto.task.CreateTaskReq;
@@ -11,6 +15,8 @@ import com.omnibank.service.agent.dd.dto.task.LoanApplicationReq;
 import com.omnibank.service.agent.dd.dto.task.TaskContextVO;
 import com.omnibank.service.agent.dd.dto.task.TaskCreateVO;
 import com.omnibank.service.agent.dd.dto.task.TaskDetailVO;
+import com.omnibank.service.agent.dd.dto.task.TaskListVO;
+import com.omnibank.service.agent.dd.dto.task.TaskQueryReq;
 import com.omnibank.service.agent.dd.dto.task.TaskStatusVO;
 import com.omnibank.service.agent.dd.entity.DdOutboxEvent;
 import com.omnibank.service.agent.dd.entity.DdTask;
@@ -20,11 +26,15 @@ import com.omnibank.service.agent.dd.service.DdOutboxService;
 import com.omnibank.service.agent.dd.service.DdScenarioService;
 import com.omnibank.service.agent.dd.service.DdTaskService;
 import java.math.BigDecimal;
+import java.nio.charset.StandardCharsets;
 import java.util.List;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.test.context.ActiveProfiles;
+import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.test.web.servlet.MvcResult;
 import org.springframework.transaction.annotation.Transactional;
 
 /**
@@ -32,8 +42,12 @@ import org.springframework.transaction.annotation.Transactional;
  */
 @SpringBootTest(classes = DdTestApplication.class)
 @ActiveProfiles("h2")
+@AutoConfigureMockMvc
 @Transactional
 class DdTaskFlowIntegrationTest {
+
+    @Autowired
+    private MockMvc mockMvc;
 
     @Autowired
     private DdTaskService taskService;
@@ -69,7 +83,7 @@ class DdTaskFlowIntegrationTest {
     }
 
     @Test
-    void 提交任务后Outbox事件驱动场景识别并停在生成计划阶段() {
+    void 提交任务后Outbox事件驱动场景识别计划生成并进入分析阶段() {
         TaskCreateVO created = taskService.create(req("91360000TEST000002", "江西测试科技有限公司",
                 "CORPORATE_WORKING_CAPITAL", "采购原材料", "MORTGAGE"));
 
@@ -85,8 +99,8 @@ class DdTaskFlowIntegrationTest {
         outboxPublisher.publishPending();
 
         TaskStatusVO status = taskService.status(created.getTaskId());
-        assertThat(status.getTaskStatus()).isEqualTo("PLANNING");
-        assertThat(status.getProgress()).isEqualTo(30);
+        assertThat(status.getTaskStatus()).isEqualTo("ANALYZING");
+        assertThat(status.getProgress()).isEqualTo(60);
 
         ScenarioVO scenario = scenarioService.latest(created.getTaskId());
         assertThat(scenario.getScenarioVersion()).isEqualTo(1);
@@ -100,7 +114,7 @@ class DdTaskFlowIntegrationTest {
         assertThat(context.getLoanApplication().getLoanPurpose()).isEqualTo("采购原材料");
         assertThat(context.getBusinessScenario().getBusinessType()).isEqualTo("WORKING_CAPITAL");
         assertThat(context.getContextVersion()).isEqualTo(1);
-        assertThat(context.getEvidenceIds()).isEmpty();
+        assertThat(context.getEvidenceIds()).hasSize(3);
     }
 
     @Test
@@ -116,7 +130,7 @@ class DdTaskFlowIntegrationTest {
         outboxPublisher.publishPending();
         DdTask afterSecond = taskMapper.selectById(created.getTaskId());
 
-        assertThat(afterSecond.getTaskStatus()).isEqualTo("PLANNING");
+        assertThat(afterSecond.getTaskStatus()).isEqualTo("ANALYZING");
         assertThat(afterSecond.getAnalysisVersion()).isEqualTo(analysisVersion);
         assertThat(afterSecond.getVersion()).isEqualTo(afterFirst.getVersion());
     }
@@ -132,7 +146,7 @@ class DdTaskFlowIntegrationTest {
         assertThat(scenario.getBusinessType()).isEqualTo("OTHER");
         assertThat(scenario.getIdentifyStatus()).isEqualTo("NEEDS_CONFIRMATION");
         assertThat(scenario.getUncertainItems()).isNotEmpty();
-        assertThat(taskService.status(created.getTaskId()).getTaskStatus()).isEqualTo("PLANNING");
+        assertThat(taskService.status(created.getTaskId()).getTaskStatus()).isEqualTo("ANALYZING");
     }
 
     @Test
@@ -147,6 +161,58 @@ class DdTaskFlowIntegrationTest {
                 .hasMessageContaining("不可取消");
         assertThatThrownBy(() -> taskService.submit(created.getTaskId()))
                 .isInstanceOf(BizException.class);
+    }
+
+    @Test
+    void 任务详情与分页可按状态过滤() {
+        TaskCreateVO created = taskService.create(req("91360000TEST000006", "江西测试科技有限公司",
+                "CORPORATE_WORKING_CAPITAL", "采购原材料", "MORTGAGE"));
+
+        TaskDetailVO detail = taskService.detail(created.getTaskId());
+        assertThat(detail.getTaskNo()).isEqualTo(created.getTaskNo());
+        assertThat(detail.getTaskName()).isEqualTo("江西测试科技有限公司尽调任务");
+        assertThat(detail.getTaskStatusDesc()).isEqualTo("草稿");
+        assertThat(detail.getEnterprise().getEnterpriseName()).isEqualTo("江西测试科技有限公司");
+        assertThat(detail.getApplication().getApplicationNo()).isEqualTo("APP000006");
+        assertThat(detail.getLatestScenario()).isNull();
+
+        TaskQueryReq query = new TaskQueryReq();
+        query.setTaskNo(created.getTaskNo());
+        query.setTaskStatus("DRAFT");
+        IPage<TaskListVO> page = taskService.page(query);
+        assertThat(page.getTotal()).isEqualTo(1);
+        assertThat(page.getRecords()).extracting(TaskListVO::getTaskId).containsExactly(created.getTaskId());
+    }
+
+    @Test
+    void 重新识别场景生成递增版本() {
+        TaskCreateVO created = taskService.create(req("91360000TEST000007", "江西测试科技有限公司",
+                "CORPORATE_WORKING_CAPITAL", "采购原材料", "MORTGAGE"));
+        taskService.submit(created.getTaskId());
+        outboxPublisher.publishPending();
+
+        ScenarioVO first = scenarioService.latest(created.getTaskId());
+        ScenarioVO second = scenarioService.reidentify(created.getTaskId());
+
+        assertThat(second.getScenarioVersion()).isEqualTo(first.getScenarioVersion() + 1);
+        assertThat(second.getBusinessType()).isEqualTo(first.getBusinessType());
+        assertThat(second.getIdentifyStatus()).isEqualTo("IDENTIFIED");
+        assertThat(scenarioService.latest(created.getTaskId()).getScenarioVersion())
+                .isEqualTo(second.getScenarioVersion());
+    }
+
+    @Test
+    void SSE端点先推送任务状态快照() throws Exception {
+        TaskCreateVO created = taskService.create(req("91360000TEST000008", "江西测试科技有限公司",
+                "CORPORATE_WORKING_CAPITAL", "采购原材料", "MORTGAGE"));
+
+        MvcResult result = mockMvc.perform(get("/v1/dd/tasks/{taskId}/events", created.getTaskId()))
+                .andExpect(status().isOk())
+                .andExpect(request().asyncStarted())
+                .andReturn();
+
+        String body = result.getResponse().getContentAsString(StandardCharsets.UTF_8);
+        assertThat(body).contains("task-status").contains("DRAFT");
     }
 
     private CreateTaskReq req(String creditCode, String enterpriseName, String productCode,

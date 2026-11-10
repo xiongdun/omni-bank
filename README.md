@@ -49,7 +49,7 @@ omni-bank
     ├── omni-bank-service-recon         # 对账域：T+1 对账/差错处理（8107）
     ├── omni-bank-service-risk          # 风控域：决策引擎/名单（8108）
     ├── omni-bank-service-system        # 系统管理域：认证(Sa-Token)/用户/角色/菜单权限/数据权限/机构部门/岗位/字典/参数/日志/通知/附件（8104，MVC 包结构）
-    └── omni-bank-service-agent         # AI 智能体域：智能体定义/会话/消息（8109，MVC 包结构，同 system 组织方式）
+    └── omni-bank-service-agent         # AI 智能体域：智能体定义/会话/消息 + 对公信贷智能尽调（8109，MVC 包结构，同 system 组织方式；尽调见模块 README）
 ```
 
 业务服务统一按 **api + boot 双模块**组织：`-api` 放 DTO/域错误码/`{域}DubboService` RPC 接口（其他服务跨域调用只依赖它，版本在 parent 统一纳管），`-boot` 为唯一启动器与配置载体。域内复杂业务（如信贷域）再按业务场景拆**场景子模块**（物理 Maven 模块，由 boot 装配为单一服务；域内私有，不进 parent 全局纳管，其他服务只允许依赖对应 api）。业务错误码统一 6 位号段：通用域 `00`（`000200` 成功、`0004xx` 客户端错误、`0005xx` 服务端错误）；业务域/场景前两位为域号——customer `100001-109999`、product `110001-119999`、credit 授信场景 `120001-129999`、loan 借据场景 `130001-139999`（随 credit 服务）、accounting `140001-149999`、payment `150001-159999`、recon `160001-169999`、risk `170001-179999`、repay `180001-189999`、limit `190001-199999`、mortgage `200001-209999`、postloan `210001-219999`、system `220001-229999`、agent `230001-239999`。
@@ -172,7 +172,7 @@ mvn spring-boot:run -pl omni-bank-service/omni-bank-service-credit/omni-bank-ser
 
 **网关说明**（`omni-bank-gateway`，统一对外入口）：
 
-- **路由转发**：Nacos 服务发现自动路由（`discovery.locator`，`/{服务名}/**` → `lb://{服务名}`）+ 显式业务路由（`/api/{域}/**` → `lb://omni-bank-service-{域}`，`StripPrefix=1` 去前缀）；当前已登记 customer/product/credit/accounting/payment/recon/risk 共 7 条，**system 与 agent 待登记**，新服务在 `application.yml` 按模板补充
+- **路由转发**：Nacos 服务发现自动路由（`discovery.locator`，`/{服务名}/**` → `lb://{服务名}`）+ 显式业务路由（`/api/{域}/**` → `lb://omni-bank-service-{域}`，`StripPrefix=1` 去前缀）；当前已登记 customer/product/credit/accounting/payment/recon/risk/agent 共 8 条，**system 待登记**，新服务在 `application.yml` 按模板补充
 - **限流熔断**：Sentinel（路由维度 / API 分组维度），兜底响应统一为 Result 结构、HTTP 429；规则由 Sentinel Dashboard（默认 `127.0.0.1:8858`）下发，持久化后续接 Nacos 数据源
 - **当前阶段**：本地无 Nacos 时注册发现默认关闭（`NACOS_ENABLED=true` 开启），网关可独立启动；下游服务不存在时转发返回 503 属预期
 
@@ -191,7 +191,7 @@ mvn deploy \
 
 ## 开发约定与维护注意点
 
-**数据访问（credit 已接入）**：boot 模块引入 `omni-bank-common-mybatis` + `mysql-connector-j`（runtime），启动类声明 `@MapperScan(basePackages = "com.omnibank.service.{域}", annotationClass = Mapper.class)`；Mapper 放各场景模块 `infrastructure.persistence.mapper`，实体继承 `BaseEntity`（雪花 ID + 审计字段自动填充 + 逻辑删除）。datasource 配置按 profile 拆分（local 本地占位 / prod 环境变量注入）；**本地无 MySQL 会因 HikariCP 初始化阻断启动**，需先建库 `omni_bank` 并执行 `docs/sql/omni_bank_sys.sql`（系统管理域全量表 + 初始化数据，初始账号 admin/admin123）。业务线程池由 `omni-bank-common-threadpool` 自动装配，`omni.thread-pool.*` 可配。**认证鉴权**：system 服务基于 Sa-Token（登录签发 token，管理端 Header `Authorization` 携带；`@SaCheckPermission` 注解鉴权；super_admin 角色通配全部权限点），其他服务跨域鉴权经 `system-api` 的 Dubbo 契约（`PermissionDubboService`/`UserDubboService`）。
+**数据访问（credit/system/agent 已接入）**：boot 模块引入 `omni-bank-common-mybatis` + `mysql-connector-j`（runtime），启动类声明 `@MapperScan(basePackages = "com.omnibank.service.{域}", annotationClass = Mapper.class)`；Mapper 放各场景模块 `infrastructure.persistence.mapper`，实体继承 `BaseEntity`（雪花 ID + 审计字段自动填充 + 逻辑删除）。datasource 配置按 profile 拆分（local 本地占位 / prod 环境变量注入）；**本地无 MySQL 会因 HikariCP 初始化阻断启动**，需先建库 `omni_bank` 并执行 `docs/sql/` 下脚本：`omni_bank_sys.sql`（系统管理域全量表 + 初始化数据，初始账号 admin/admin123）、`omni_bank_ai.sql`（智能体域 3 表）、`omni_bank_dd.sql`（对公信贷尽调域 6 表 + Outbox 事件表）。业务线程池由 `omni-bank-common-threadpool` 自动装配，`omni.thread-pool.*` 可配。**认证鉴权**：system 服务基于 Sa-Token（登录签发 token，管理端 Header `Authorization` 携带；`@SaCheckPermission` 注解鉴权；super_admin 角色通配全部权限点），其他服务跨域鉴权经 `system-api` 的 Dubbo 契约（`PermissionDubboService`/`UserDubboService`）。
 
 - **Spring Boot 升级**需两处同步：`omni-bank-parent` 的 `spring-boot-starter-parent` 版本 + BOM 的 `spring-boot.version`
 - **Lombok / MapStruct 版本升级**需与 `omni-bank-parent` 中 compiler 插件 `annotationProcessorPaths` 的三个硬编码版本同步（import 的 BOM 不传递属性）

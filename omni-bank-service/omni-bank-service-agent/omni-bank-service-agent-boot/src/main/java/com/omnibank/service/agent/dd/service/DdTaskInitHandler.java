@@ -1,16 +1,19 @@
 package com.omnibank.service.agent.dd.service;
 
+import com.omnibank.common.core.exception.BizException;
 import com.omnibank.service.agent.api.enums.DdErrorCode;
 import com.omnibank.service.agent.dd.entity.DdTask;
 import com.omnibank.service.agent.dd.enums.TaskStatus;
 import com.omnibank.service.agent.dd.event.DdOutboxEventMessage;
+import com.omnibank.service.agent.dd.plan.DdPlanScheduler;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.event.EventListener;
 import org.springframework.stereotype.Component;
 
 /**
- * 任务初始化消费者：收到 TASK_SUBMITTED 后推进任务到场景识别并生成场景识别结果。
+ * 任务初始化消费者：收到 TASK_SUBMITTED 后推进任务到场景识别，识别完成即采集基础外部证据，
+ * 随后生成尽调计划并交由 Graph 调度，链路止于 Agent 分析阶段。
  * 幂等依据任务当前状态，而不是事件是否重复。
  */
 @Slf4j
@@ -23,6 +26,10 @@ public class DdTaskInitHandler {
     private final DdTaskService taskService;
 
     private final DdScenarioService scenarioService;
+
+    private final DdEvidenceService evidenceService;
+
+    private final DdPlanScheduler planScheduler;
 
     @EventListener
     public void handle(DdOutboxEventMessage message) {
@@ -41,7 +48,12 @@ public class DdTaskInitHandler {
         }
         try {
             scenarioService.identify(taskId);
+            evidenceService.collectBaseEvidence(taskId);
             taskService.markPlanning(taskId);
+            planScheduler.schedule(taskId);
+        } catch (BizException e) {
+            log.error("任务初始化失败 taskId={}, errorCode={}", taskId, e.getCode(), e);
+            taskService.markFailed(taskId, e.getCode(), e.getMessage());
         } catch (Exception e) {
             log.error("任务初始化失败 taskId={}", taskId, e);
             taskService.markFailed(taskId, DdErrorCode.SCENARIO_IDENTIFY_FAILED.getCode(),

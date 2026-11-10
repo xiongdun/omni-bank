@@ -76,3 +76,9 @@ spring:
                 - Path=/api/risk/**
               filters:
                 - StripPrefix=1
+            - id: agent
+              uri: lb://omni-bank-service-agent
+              predicates:
+                - Path=/api/agent/**
+              filters:
+                - StripPrefix=1

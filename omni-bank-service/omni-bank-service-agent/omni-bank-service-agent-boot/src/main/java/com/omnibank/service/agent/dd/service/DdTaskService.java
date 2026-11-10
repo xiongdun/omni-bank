@@ -5,6 +5,7 @@ import com.omnibank.service.agent.dd.dto.task.CreateTaskReq;
 import com.omnibank.service.agent.dd.dto.task.TaskContextVO;
 import com.omnibank.service.agent.dd.dto.task.TaskCreateVO;
 import com.omnibank.service.agent.dd.dto.task.TaskDetailVO;
+import com.omnibank.service.agent.dd.dto.task.TaskListVO;
 import com.omnibank.service.agent.dd.dto.task.TaskQueryReq;
 import com.omnibank.service.agent.dd.dto.task.TaskStatusVO;
 import com.omnibank.service.agent.dd.entity.DdTask;
@@ -21,7 +22,7 @@ public interface DdTaskService {
     TaskDetailVO detail(Long taskId);
 
     /** 任务分页 */
-    IPage<DdTask> page(TaskQueryReq req);
+    IPage<TaskListVO> page(TaskQueryReq req);
 
     /** 任务状态（轮询 / SSE 断线恢复） */
     TaskStatusVO status(Long taskId);
@@ -41,8 +42,17 @@ public interface DdTaskService {
     /** 初始化阶段推进到场景识别，条件更新保证并发幂等；已被其他执行者推进时返回 false */
     boolean beginScenarioIdentify(Long taskId);
 
-    /** 场景识别完成，推进到生成尽调计划（P1 终点，P4 由 Graph 接管） */
+    /** 场景识别完成，推进到生成尽调计划（P4 由 Planner 生成计划并调度） */
     void markPlanning(Long taskId);
+
+    /** 计划调度开始：PLANNING -> DATA_COLLECTING，条件更新保证并发幂等；状态不符返回 false */
+    boolean beginDataCollecting(Long taskId);
+
+    /** 计划调度完成：DATA_COLLECTING -> ANALYZING */
+    void markAnalyzing(Long taskId);
+
+    /** 更新任务当前计划ID */
+    void updateCurrentPlan(Long taskId, Long planId);
 
     /** 初始化失败，记录错误信息并置为失败 */
     void markFailed(Long taskId, String errorCode, String errorMessage);

@@ -14,6 +14,7 @@ import com.omnibank.service.agent.dd.dto.task.CreateTaskReq;
 import com.omnibank.service.agent.dd.dto.task.TaskContextVO;
 import com.omnibank.service.agent.dd.dto.task.TaskCreateVO;
 import com.omnibank.service.agent.dd.dto.task.TaskDetailVO;
+import com.omnibank.service.agent.dd.dto.task.TaskListVO;
 import com.omnibank.service.agent.dd.dto.task.TaskQueryReq;
 import com.omnibank.service.agent.dd.dto.task.TaskStatusVO;
 import com.omnibank.service.agent.dd.entity.DdLoanApplication;
@@ -119,13 +120,14 @@ public class DdTaskServiceImpl extends ServiceImpl<DdTaskMapper, DdTask> impleme
     }
 
     @Override
-    public IPage<DdTask> page(TaskQueryReq req) {
+    public IPage<TaskListVO> page(TaskQueryReq req) {
         return lambdaQuery()
                 .like(StringUtils.hasText(req.getTaskNo()), DdTask::getTaskNo, req.getTaskNo())
                 .eq(StringUtils.hasText(req.getTaskStatus()), DdTask::getTaskStatus, req.getTaskStatus())
                 .eq(req.getEnterpriseId() != null, DdTask::getEnterpriseId, req.getEnterpriseId())
                 .orderByDesc(DdTask::getCreateTime)
-                .page(new Page<>(req.getCurrent(), req.getSize()));
+                .page(new Page<>(req.getCurrent(), req.getSize()))
+                .convert(this::toListVO);
     }
 
     @Override
@@ -205,12 +207,57 @@ public class DdTaskServiceImpl extends ServiceImpl<DdTaskMapper, DdTask> impleme
     }
 
     @Override
+    public boolean beginDataCollecting(Long taskId) {
+        int rows = baseMapper.update(null, Wrappers.<DdTask>lambdaUpdate()
+                .eq(DdTask::getId, taskId)
+                .eq(DdTask::getTaskStatus, TaskStatus.PLANNING.name())
+                .set(DdTask::getTaskStatus, TaskStatus.DATA_COLLECTING.name())
+                .set(DdTask::getCurrentStage, TaskStatus.DATA_COLLECTING.name())
+                .set(DdTask::getUpdater, currentOperator())
+                .setSql("version = version + 1"));
+        if (rows != 1) {
+            return false;
+        }
+        sseRegistry.publish(taskId, "task-status", status(taskId));
+        return true;
+    }
+
+    @Override
+    public void markAnalyzing(Long taskId) {
+        int rows = baseMapper.update(null, Wrappers.<DdTask>lambdaUpdate()
+                .eq(DdTask::getId, taskId)
+                .eq(DdTask::getTaskStatus, TaskStatus.DATA_COLLECTING.name())
+                .set(DdTask::getTaskStatus, TaskStatus.ANALYZING.name())
+                .set(DdTask::getCurrentStage, TaskStatus.ANALYZING.name())
+                .set(DdTask::getUpdater, currentOperator())
+                .setSql("version = version + 1"));
+        if (rows != 1) {
+            throw new BizException(DdErrorCode.TASK_STATUS_CONFLICT);
+        }
+        sseRegistry.publish(taskId, "task-status", status(taskId));
+    }
+
+    @Override
+    public void updateCurrentPlan(Long taskId, Long planId) {
+        int rows = baseMapper.update(null, Wrappers.<DdTask>lambdaUpdate()
+                .eq(DdTask::getId, taskId)
+                .set(DdTask::getCurrentPlanId, planId)
+                .set(DdTask::getUpdater, currentOperator())
+                .setSql("version = version + 1"));
+        if (rows != 1) {
+            throw new BizException(DdErrorCode.TASK_NOT_FOUND);
+        }
+    }
+
+    @Override
     public void markFailed(Long taskId, String errorCode, String errorMessage) {
         String message = errorMessage != null && errorMessage.length() > 1000
                 ? errorMessage.substring(0, 1000) : errorMessage;
         int rows = baseMapper.update(null, Wrappers.<DdTask>lambdaUpdate()
                 .eq(DdTask::getId, taskId)
-                .in(DdTask::getTaskStatus, TaskStatus.INITIALIZING.name(), TaskStatus.SCENARIO_IDENTIFYING.name())
+                .in(DdTask::getTaskStatus, TaskStatus.INITIALIZING.name(), TaskStatus.SCENARIO_IDENTIFYING.name(),
+                        TaskStatus.PLANNING.name(), TaskStatus.DATA_COLLECTING.name(),
+                        TaskStatus.ANALYZING.name())
                 .set(DdTask::getTaskStatus, TaskStatus.FAILED.name())
                 .set(DdTask::getCurrentStage, TaskStatus.FAILED.name())
                 .set(DdTask::getLastErrorCode, errorCode)
@@ -241,6 +288,23 @@ public class DdTaskServiceImpl extends ServiceImpl<DdTaskMapper, DdTask> impleme
         task.setTaskStatus(target.name());
         task.setCurrentStage(target.name());
         task.setVersion(task.getVersion() + 1);
+    }
+
+    private TaskListVO toListVO(DdTask task) {
+        TaskStatus status = parseStatus(task);
+        TaskListVO vo = new TaskListVO();
+        vo.setTaskId(task.getId());
+        vo.setTaskNo(task.getTaskNo());
+        vo.setTaskName(task.getTaskName());
+        vo.setTaskStatus(status.name());
+        vo.setTaskStatusDesc(status.getDesc());
+        vo.setCurrentStage(task.getCurrentStage());
+        vo.setProgress(status.getProgress());
+        vo.setEnterpriseId(task.getEnterpriseId());
+        vo.setApplicationId(task.getApplicationId());
+        vo.setCreateTime(task.getCreateTime());
+        vo.setUpdateTime(task.getUpdateTime());
+        return vo;
     }
 
     private TaskStatusVO toStatusVO(DdTask task) {

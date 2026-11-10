@@ -8,7 +8,7 @@ import org.springframework.context.annotation.Configuration;
 
 /**
  * MyBatis-Plus 通用配置：分页插件（拦截器实现依赖 mybatis-plus-jsqlparser 模块）。
- * 约定：服务应用启动类需位于 com.omnibank 包下，使本模块 Bean 被组件扫描。
+ * 通过 META-INF/spring/...AutoConfiguration.imports 自动装配，业务启动类无需扫描本包。
  */
 @Configuration
 public class MybatisPlusConfig {

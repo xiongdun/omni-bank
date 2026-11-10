@@ -1,0 +1,7 @@
+企业名称：{{enterpriseName}}
+统一社会信用代码：{{creditCode}}
+业务场景：{{businessScenario}}
+证据摘要：
+{{evidenceSummary}}
+
+请完成主体信息核验，按输出 Schema 返回 JSON。

@@ -4,7 +4,7 @@ import com.omnibank.service.agent.dd.dto.scenario.ScenarioVO;
 import com.omnibank.service.agent.dd.entity.DdBusinessScenario;
 
 /**
- * 业务场景识别服务：模块一使用配置 + 规则识别，LLM 识别在 P4 Planner 接入
+ * 业务场景识别服务：模块一使用配置 + 规则识别；P4 Planner 以识别结果为输入生成计划，场景识别的模型化改造待后续阶段
  */
 public interface DdScenarioService {
 

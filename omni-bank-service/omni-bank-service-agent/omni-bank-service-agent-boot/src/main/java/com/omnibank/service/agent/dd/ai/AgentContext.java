@@ -36,7 +36,7 @@ public class AgentContext {
     /** 可用证据引用 */
     private List<EvidenceRef> evidences;
 
-    /** 上游 Agent 结果 */
+    /** 上游节点结果（Graph 节点ID -> AgentResult） */
     private Map<String, Object> upstreamResults;
 
     /** 可用工具编码 */

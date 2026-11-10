@@ -32,7 +32,7 @@ public class DdTask extends BaseEntity {
     /** 当前执行阶段 */
     private String currentStage;
 
-    /** 当前计划ID（P4 Planner 接入后使用） */
+    /** 当前计划ID（P4 Planner 生成的最新计划版本） */
     private Long currentPlanId;
 
     /** 上下文版本 */

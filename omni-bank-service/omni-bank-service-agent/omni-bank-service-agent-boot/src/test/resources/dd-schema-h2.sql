@@ -102,7 +102,9 @@ CREATE TABLE IF NOT EXISTS dd_business_scenario (
 CREATE TABLE IF NOT EXISTS dd_evidence (
     id               BIGINT        NOT NULL PRIMARY KEY,
     task_id          BIGINT        NOT NULL,
+    enterprise_id    BIGINT,
     evidence_type    VARCHAR(64)   NOT NULL,
+    source_type      VARCHAR(64),
     source_system    VARCHAR(64),
     source_reference VARCHAR(500),
     subject_id       VARCHAR(64),
@@ -110,6 +112,8 @@ CREATE TABLE IF NOT EXISTS dd_evidence (
     collected_at     TIMESTAMP,
     content_summary  VARCHAR(2000),
     content_hash     VARCHAR(64),
+    confidence       DECIMAL(5, 4),
+    is_mock          BOOLEAN       DEFAULT FALSE,
     status           VARCHAR(32)   NOT NULL,
     creator          VARCHAR(64),
     create_time      TIMESTAMP,
@@ -137,4 +141,30 @@ CREATE TABLE IF NOT EXISTS dd_outbox_event (
     version        INT          DEFAULT 0,
     del_flag       TINYINT      DEFAULT 0,
     CONSTRAINT uk_dd_outbox_event_id UNIQUE (event_id)
+);
+
+CREATE TABLE IF NOT EXISTS dd_plan (
+    id                BIGINT        NOT NULL PRIMARY KEY,
+    task_id           BIGINT        NOT NULL,
+    plan_version      INT           NOT NULL,
+    planner_mode      VARCHAR(32)   NOT NULL,
+    business_scenario VARCHAR(64),
+    sub_scenario      VARCHAR(64),
+    confidence        DECIMAL(5, 4),
+    reasoning_summary VARCHAR(2000),
+    agent_plan        VARCHAR(8000),
+    data_plan         VARCHAR(8000),
+    material_plan     VARCHAR(8000),
+    dependency_plan   VARCHAR(8000),
+    supplement_plan   VARCHAR(8000),
+    execution_config  VARCHAR(4000),
+    model_name        VARCHAR(128),
+    prompt_version    VARCHAR(64),
+    creator           VARCHAR(64),
+    create_time       TIMESTAMP,
+    updater           VARCHAR(64),
+    update_time       TIMESTAMP,
+    version           INT           DEFAULT 0,
+    del_flag          TINYINT       DEFAULT 0,
+    CONSTRAINT uk_dd_plan_task_version UNIQUE (task_id, plan_version)
 );

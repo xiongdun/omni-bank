@@ -28,6 +28,24 @@ omni:
     outbox:
       scan-interval-ms: 1000
       max-retries: 5
+    # 外部数据适配器：银行/外部接口未确认前只启用显式标记的 Mock 实现
+    # Mock 证据的来源系统以 MOCK_ 开头且 isMock=true；关闭后任务初始化不自动采集基础证据
+    adapter:
+      mock:
+        enabled: true
+    # 大模型调用（Spring AI ChatClient）：默认 MOCK（不发起外部请求，结果带 mock 标记）
+    # 切换真实模型网关时改为 OPENAI_COMPATIBLE，并通过环境变量注入：
+    #   OMNI_DD_LLM_BASE_URL / OMNI_DD_LLM_API_KEY / OMNI_DD_LLM_MODEL
+    llm:
+      mode: MOCK
+      base-url: ${OMNI_DD_LLM_BASE_URL:}
+      api-key: ${OMNI_DD_LLM_API_KEY:}
+      model: ${OMNI_DD_LLM_MODEL:}
+      completions-path: /v1/chat/completions
+      connect-timeout-ms: 3000
+      request-timeout-ms: 30000
+      temperature: 0.20
+      max-tokens: 2048
     # 业务场景识别规则：产品编码 / 贷款用途关键词 -> 业务类型
     # 规则口径待银行业务部门确认，确认前仅作辅助分类，低置信度一律标记待确认
     scenario:
@@ -64,6 +82,3 @@ omni:
           business-type: TRADE_FINANCE
           sub-scenario: TRADE_SETTLEMENT
           confidence: 0.85
-
-# TODO 中间件接入清单：
-#  - 大模型调用：模型网关地址 / API Key 经环境变量注入（预留）

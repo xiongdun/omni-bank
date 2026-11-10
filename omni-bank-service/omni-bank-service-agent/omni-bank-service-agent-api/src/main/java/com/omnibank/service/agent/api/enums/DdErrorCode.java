@@ -24,7 +24,20 @@ public enum DdErrorCode implements ErrorCode {
     SCENARIO_IDENTIFY_FAILED("230111", "业务场景识别失败"),
     CONTEXT_ASSEMBLE_FAILED("230112", "企业上下文组装失败"),
     OUTBOX_EVENT_PUBLISH_FAILED("230113", "Outbox 事件发布失败"),
-    JSON_PROCESS_FAILED("230114", "JSON 数据处理失败");
+    JSON_PROCESS_FAILED("230114", "JSON 数据处理失败"),
+    EVIDENCE_NOT_FOUND("230115", "证据不存在"),
+    EVIDENCE_COLLECT_FAILED("230116", "证据采集失败"),
+    TOOL_NOT_FOUND("230117", "工具不存在"),
+    AGENT_NOT_FOUND("230118", "Agent 不存在"),
+    AGENT_EXECUTION_FAILED("230119", "Agent 执行失败"),
+    PROMPT_NOT_FOUND("230120", "Prompt 模板不存在"),
+    PROMPT_RENDER_FAILED("230121", "Prompt 渲染失败"),
+    GRAPH_INVALID("230122", "Graph 定义非法"),
+    LLM_CALL_FAILED("230123", "大模型调用失败"),
+    LLM_OUTPUT_INVALID("230124", "大模型输出解析失败"),
+    GRAPH_EXECUTION_FAILED("230125", "Graph 执行失败"),
+    PLANNER_GENERATE_FAILED("230126", "尽调计划生成失败"),
+    PLAN_INVALID("230127", "尽调计划校验未通过");
 
     private final String code;
 

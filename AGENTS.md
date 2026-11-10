@@ -92,6 +92,8 @@ Strong success criteria let you loop independently. Weak criteria ("make it work
 | Dubbo | 3.3.6 | SCA BOM 不纳管，走 `dubbo-bom` |
 | MyBatis-Plus | 3.5.17 | **包路径已迁移，见第 9.3 节** |
 | Sa-Token | 1.46.0 | |
+| Spring AI | 1.1.2 | Agent 框架统一模型抽象（`ChatClient` / `ChatModel`），BOM 需在 SAA BOM 之前 import |
+| Spring AI Alibaba | 1.1.2.4-security-fix | Agent Graph 编排（`StateGraph` / `CompiledGraph`），对应 Spring AI 1.1.2 |
 | TransmittableThreadLocal | 2.14.5 | 用户上下文跨线程传递 |
 | ArchUnit | 1.5.1 | 仅用原生 API，见第 11 节 |
 
@@ -312,6 +314,8 @@ docs: 补充 agent 域接口说明
 11. **继承 `BaseDTO` 的 DTO 要加 `@EqualsAndHashCode(callSuper = true)`**，否则 Lombok 告警。
 12. **Dubbo 依赖需显式引入**：`dubbo-spring-boot-starter` + `dubbo-registry-nacos`（SCA BOM 不纳管，版本由 `dubbo-bom` 提供）。
 13. **网关路由前缀**：显式路由 `StripPrefix=1`，下游 Controller 不要重复写 `/api/{域}` 前缀。
+14. **SAA Graph 并行扇出形态受限**：一个节点直接连多个后继时，各后继必须收敛到**同一个**直接后继节点（否则编译抛 `GraphStateException`）；分支长度不一致的 DAG 需改造图结构，不能指望 `ParallelEdgeProcessor`（该版本未接入）。
+15. **SAA Graph 终态不可按自定义类型读取**：`CompiledGraph` 返回的终态经 `StateSerializer` 序列化克隆，自定义对象会变成 `Map`；节点结果应在节点动作内直接收集，不要从终态 `value(key, YourType.class)` 取。
 
 ## 12. 文档索引
 

@@ -33,10 +33,25 @@
             <groupId>com.omnibank</groupId>
             <artifactId>omni-bank-common-mybatis</artifactId>
         </dependency>
-        <!-- 统一业务线程池（模型调用异步化预留） -->
+        <!-- 统一业务线程池（Graph 并行节点 / 模型调用异步化） -->
         <dependency>
             <groupId>com.omnibank</groupId>
             <artifactId>omni-bank-common-threadpool</artifactId>
+        </dependency>
+        <!-- Spring AI：ChatClient 统一模型调用抽象 -->
+        <dependency>
+            <groupId>org.springframework.ai</groupId>
+            <artifactId>spring-ai-client-chat</artifactId>
+        </dependency>
+        <!-- Spring AI OpenAI 兼容实现：对接银行模型网关 -->
+        <dependency>
+            <groupId>org.springframework.ai</groupId>
+            <artifactId>spring-ai-openai</artifactId>
+        </dependency>
+        <!-- Spring AI Alibaba Graph：Agent 编排（StateGraph / CompiledGraph） -->
+        <dependency>
+            <groupId>com.alibaba.cloud.ai</groupId>
+            <artifactId>spring-ai-alibaba-graph-core</artifactId>
         </dependency>
         <!-- MySQL 驱动 -->
         <dependency>

@@ -1,7 +1,7 @@
 -- ============================================================
 -- 对公信贷智能尽调域（dd_*）建表脚本
 -- 所属服务：omni-bank-service-agent（端口 8109）
--- 说明：模块一（尽调任务与企业上下文）所需最小表集，可重复执行
+-- 说明：模块一（尽调任务与企业上下文）、P2 证据中心与 P4 尽调计划所需表集，可重复执行
 -- ============================================================
 
 CREATE TABLE IF NOT EXISTS dd_task (
@@ -120,7 +120,9 @@ CREATE TABLE IF NOT EXISTS dd_business_scenario (
 CREATE TABLE IF NOT EXISTS dd_evidence (
     id               BIGINT       NOT NULL COMMENT '主键（雪花）',
     task_id          BIGINT       NOT NULL COMMENT '任务ID',
+    enterprise_id    BIGINT       DEFAULT NULL COMMENT '企业ID',
     evidence_type    VARCHAR(64)  NOT NULL COMMENT '证据类型',
+    source_type      VARCHAR(64)  DEFAULT NULL COMMENT '来源类型',
     source_system    VARCHAR(64)  DEFAULT NULL COMMENT '来源系统',
     source_reference VARCHAR(500) DEFAULT NULL COMMENT '来源引用',
     subject_id       VARCHAR(64)  DEFAULT NULL COMMENT '主体标识',
@@ -128,6 +130,8 @@ CREATE TABLE IF NOT EXISTS dd_evidence (
     collected_at     DATETIME(3)  DEFAULT NULL COMMENT '采集时间',
     content_summary  VARCHAR(2000) DEFAULT NULL COMMENT '内容摘要',
     content_hash     VARCHAR(64)  DEFAULT NULL COMMENT '内容哈希',
+    confidence       DECIMAL(5,4) DEFAULT NULL COMMENT '证据置信度',
+    is_mock          TINYINT      NOT NULL DEFAULT 0 COMMENT '是否模拟数据：0 真实 1 模拟',
     status           VARCHAR(32)  NOT NULL DEFAULT 'ACTIVE' COMMENT '证据状态',
     creator          VARCHAR(64)  DEFAULT NULL COMMENT '创建人',
     create_time      DATETIME(3)  NOT NULL DEFAULT CURRENT_TIMESTAMP(3) COMMENT '创建时间',
@@ -137,8 +141,39 @@ CREATE TABLE IF NOT EXISTS dd_evidence (
     del_flag         TINYINT      NOT NULL DEFAULT 0 COMMENT '删除标志：0 未删 1 已删',
     PRIMARY KEY (id),
     KEY idx_task_id (task_id),
-    KEY idx_task_type (task_id, evidence_type)
-) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COMMENT '尽调证据索引（模块一最小结构）';
+    KEY idx_task_type (task_id, evidence_type),
+    KEY idx_enterprise_id (enterprise_id)
+) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COMMENT '尽调证据索引（P2 证据中心）';
+
+-- P2 增量：P1 已建库的环境补齐证据中心字段（MySQL 8 无 ADD COLUMN IF NOT EXISTS，用存储过程保证幂等）
+DROP PROCEDURE IF EXISTS dd_evidence_p2_upgrade;
+DELIMITER $$
+CREATE PROCEDURE dd_evidence_p2_upgrade()
+BEGIN
+    IF NOT EXISTS (SELECT 1 FROM information_schema.COLUMNS
+                   WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'dd_evidence'
+                     AND COLUMN_NAME = 'enterprise_id') THEN
+        ALTER TABLE dd_evidence ADD COLUMN enterprise_id BIGINT DEFAULT NULL COMMENT '企业ID' AFTER task_id;
+    END IF;
+    IF NOT EXISTS (SELECT 1 FROM information_schema.COLUMNS
+                   WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'dd_evidence'
+                     AND COLUMN_NAME = 'source_type') THEN
+        ALTER TABLE dd_evidence ADD COLUMN source_type VARCHAR(64) DEFAULT NULL COMMENT '来源类型' AFTER evidence_type;
+    END IF;
+    IF NOT EXISTS (SELECT 1 FROM information_schema.COLUMNS
+                   WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'dd_evidence'
+                     AND COLUMN_NAME = 'confidence') THEN
+        ALTER TABLE dd_evidence ADD COLUMN confidence DECIMAL(5,4) DEFAULT NULL COMMENT '证据置信度' AFTER content_hash;
+    END IF;
+    IF NOT EXISTS (SELECT 1 FROM information_schema.COLUMNS
+                   WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'dd_evidence'
+                     AND COLUMN_NAME = 'is_mock') THEN
+        ALTER TABLE dd_evidence ADD COLUMN is_mock TINYINT NOT NULL DEFAULT 0 COMMENT '是否模拟数据：0 真实 1 模拟' AFTER confidence;
+    END IF;
+END$$
+DELIMITER ;
+CALL dd_evidence_p2_upgrade();
+DROP PROCEDURE dd_evidence_p2_upgrade;
 
 CREATE TABLE IF NOT EXISTS dd_outbox_event (
     id             BIGINT       NOT NULL COMMENT '主键（雪花）',
@@ -161,3 +196,31 @@ CREATE TABLE IF NOT EXISTS dd_outbox_event (
     UNIQUE KEY uk_event_id (event_id),
     KEY idx_publish_status_next_retry (publish_status, next_retry_at)
 ) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COMMENT '尽调域 Outbox 事件';
+
+CREATE TABLE IF NOT EXISTS dd_plan (
+    id                 BIGINT       NOT NULL COMMENT '主键（雪花）',
+    task_id            BIGINT       NOT NULL COMMENT '任务ID',
+    plan_version       INT          NOT NULL COMMENT '计划版本（任务内自增）',
+    planner_mode       VARCHAR(32)  NOT NULL COMMENT '计划生成模式：LLM / MOCK',
+    business_scenario  VARCHAR(64)  DEFAULT NULL COMMENT '识别业务场景',
+    sub_scenario       VARCHAR(64)  DEFAULT NULL COMMENT '子场景',
+    confidence         DECIMAL(5, 4) DEFAULT NULL COMMENT '场景置信度',
+    reasoning_summary  VARCHAR(2000) DEFAULT NULL COMMENT '规划说明',
+    agent_plan         JSON         DEFAULT NULL COMMENT 'Agent 计划',
+    data_plan          JSON         DEFAULT NULL COMMENT '数据采集计划',
+    material_plan      JSON         DEFAULT NULL COMMENT '材料计划',
+    dependency_plan    JSON         DEFAULT NULL COMMENT 'Agent 依赖关系',
+    supplement_plan    JSON         DEFAULT NULL COMMENT '资料缺口计划',
+    execution_config   JSON         DEFAULT NULL COMMENT '执行配置',
+    model_name         VARCHAR(128) DEFAULT NULL COMMENT '模型名称（规则生成为 MOCK_RULE）',
+    prompt_version     VARCHAR(64)  DEFAULT NULL COMMENT 'Prompt 版本',
+    creator            VARCHAR(64)  DEFAULT NULL COMMENT '创建人',
+    create_time        DATETIME(3)  NOT NULL DEFAULT CURRENT_TIMESTAMP(3) COMMENT '创建时间',
+    updater            VARCHAR(64)  DEFAULT NULL COMMENT '更新人',
+    update_time        DATETIME(3)  NOT NULL DEFAULT CURRENT_TIMESTAMP(3) ON UPDATE CURRENT_TIMESTAMP(3) COMMENT '更新时间',
+    version            INT          NOT NULL DEFAULT 0 COMMENT '乐观锁版本',
+    del_flag           TINYINT      NOT NULL DEFAULT 0 COMMENT '删除标志：0 未删 1 已删',
+    PRIMARY KEY (id),
+    UNIQUE KEY uk_task_plan_version (task_id, plan_version),
+    KEY idx_task_id (task_id)
+) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COMMENT '尽调计划（P4 Planner）';

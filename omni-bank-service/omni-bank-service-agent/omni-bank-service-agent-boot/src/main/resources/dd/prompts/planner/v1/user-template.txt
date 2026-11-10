@@ -1,0 +1,17 @@
+企业名称：{{enterpriseName}}
+统一社会信用代码：{{creditCode}}
+所属行业：{{industryName}}
+业务场景：{{businessScenario}}
+子场景：{{subScenario}}
+场景置信度：{{scenarioConfidence}}
+场景状态：{{scenarioStatus}}
+产品编码：{{productCode}}
+产品名称：{{productName}}
+贷款用途：{{loanPurpose}}
+申请金额：{{applyAmount}}
+担保方式：{{guaranteeType}}
+证据摘要：
+{{evidenceSummary}}
+可用 Agent 清单：
+{{availableAgents}}
+请生成尽调计划（agentPlan、dataPlan、materialPlan、dependencyPlan、supplementPlan、executionConfig），按输出 Schema 返回 JSON。

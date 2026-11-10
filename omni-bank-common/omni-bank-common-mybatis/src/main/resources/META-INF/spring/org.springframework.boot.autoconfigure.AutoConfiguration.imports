@@ -1,0 +1,2 @@
+com.omnibank.common.mybatis.config.MybatisPlusConfig
+com.omnibank.common.mybatis.handler.AuditMetaObjectHandler

@@ -53,4 +53,17 @@ public class DdJsonSupport {
             throw new BizException(DdErrorCode.JSON_PROCESS_FAILED);
         }
     }
+
+    /** 读取「字符串 -> 字符串集合」结构（如 Agent 依赖计划）；空值返回空 Map */
+    public Map<String, List<String>> readStringListMap(String json) {
+        if (json == null || json.isBlank()) {
+            return Map.of();
+        }
+        try {
+            return objectMapper.readValue(json, new TypeReference<Map<String, List<String>>>() {
+            });
+        } catch (JsonProcessingException e) {
+            throw new BizException(DdErrorCode.JSON_PROCESS_FAILED);
+        }
+    }
 }

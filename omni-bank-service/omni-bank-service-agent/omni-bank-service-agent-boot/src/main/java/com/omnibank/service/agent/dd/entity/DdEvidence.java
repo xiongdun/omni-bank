@@ -2,12 +2,13 @@ package com.omnibank.service.agent.dd.entity;
 
 import com.baomidou.mybatisplus.annotation.TableName;
 import com.omnibank.common.mybatis.entity.BaseEntity;
+import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
 
 /**
- * 尽调证据索引：模块一只保存证据元信息，原始文件与解析结果在 P2 补齐
+ * 尽调证据索引：保存证据元信息，原始文件与解析结果在后续阶段补齐
  */
 @Data
 @EqualsAndHashCode(callSuper = true)
@@ -17,8 +18,14 @@ public class DdEvidence extends BaseEntity {
     /** 任务ID */
     private Long taskId;
 
+    /** 企业ID */
+    private Long enterpriseId;
+
     /** 证据类型，见 EvidenceType */
     private String evidenceType;
+
+    /** 来源类型，见 EvidenceSourceType */
+    private String sourceType;
 
     /** 来源系统 */
     private String sourceSystem;
@@ -40,6 +47,12 @@ public class DdEvidence extends BaseEntity {
 
     /** 内容哈希 */
     private String contentHash;
+
+    /** 证据置信度 */
+    private BigDecimal confidence;
+
+    /** 是否模拟数据：银行/外部接口未确认前由 Mock Adapter 采集，必须显式标记 */
+    private Boolean isMock;
 
     /** 证据状态，见 EvidenceStatus */
     private String status;
