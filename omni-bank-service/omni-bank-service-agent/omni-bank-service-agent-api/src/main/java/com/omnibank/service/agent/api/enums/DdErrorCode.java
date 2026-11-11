@@ -37,7 +37,8 @@ public enum DdErrorCode implements ErrorCode {
     LLM_OUTPUT_INVALID("230124", "大模型输出解析失败"),
     GRAPH_EXECUTION_FAILED("230125", "Graph 执行失败"),
     PLANNER_GENERATE_FAILED("230126", "尽调计划生成失败"),
-    PLAN_INVALID("230127", "尽调计划校验未通过");
+    PLAN_INVALID("230127", "尽调计划校验未通过"),
+    TASK_NOT_RESUMABLE("230128", "任务当前状态不可恢复执行");
 
     private final String code;
 

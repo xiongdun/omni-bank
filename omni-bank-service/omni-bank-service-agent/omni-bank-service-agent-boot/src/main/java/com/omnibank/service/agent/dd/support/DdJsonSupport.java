@@ -66,4 +66,16 @@ public class DdJsonSupport {
             throw new BizException(DdErrorCode.JSON_PROCESS_FAILED);
         }
     }
+
+    /** 按指定类型读取；空值返回 null，用于执行记录等结构化快照还原 */
+    public <T> T read(String json, TypeReference<T> type) {
+        if (json == null || json.isBlank()) {
+            return null;
+        }
+        try {
+            return objectMapper.readValue(json, type);
+        } catch (JsonProcessingException e) {
+            throw new BizException(DdErrorCode.JSON_PROCESS_FAILED);
+        }
+    }
 }

@@ -77,6 +77,23 @@ public class DdEvidenceServiceImpl extends ServiceImpl<DdEvidenceMapper, DdEvide
     }
 
     @Override
+    @Transactional(rollbackFor = Exception.class)
+    public Long recordEvidence(Long taskId, Long enterpriseId, ExternalDataItem item) {
+        DdEvidence existing = lambdaQuery()
+                .eq(DdEvidence::getTaskId, taskId)
+                .eq(DdEvidence::getSourceSystem, item.sourceSystem())
+                .eq(DdEvidence::getSourceReference, item.sourceReference())
+                .last("LIMIT 1")
+                .one();
+        if (existing != null) {
+            return existing.getId();
+        }
+        DdEvidence evidence = toEntity(taskId, enterpriseId, item, item.mock());
+        save(evidence);
+        return evidence.getId();
+    }
+
+    @Override
     public IPage<EvidenceListVO> page(Long taskId, EvidenceQueryReq req) {
         taskService.requireTask(taskId);
         return lambdaQuery()

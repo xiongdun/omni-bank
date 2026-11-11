@@ -168,3 +168,30 @@ CREATE TABLE IF NOT EXISTS dd_plan (
     del_flag          TINYINT       DEFAULT 0,
     CONSTRAINT uk_dd_plan_task_version UNIQUE (task_id, plan_version)
 );
+
+CREATE TABLE IF NOT EXISTS dd_agent_execution (
+    id               BIGINT        NOT NULL PRIMARY KEY,
+    task_id          BIGINT        NOT NULL,
+    plan_id          BIGINT,
+    graph_code       VARCHAR(128)  NOT NULL,
+    node_id          VARCHAR(128)  NOT NULL,
+    agent_code       VARCHAR(64),
+    execution_no     INT           NOT NULL DEFAULT 1,
+    execution_status VARCHAR(32)   NOT NULL,
+    summary          VARCHAR(1000),
+    error_message    VARCHAR(1000),
+    input_snapshot   VARCHAR(16000),
+    result_content   VARCHAR(16000),
+    model_version    VARCHAR(128),
+    prompt_version   VARCHAR(64),
+    started_at       TIMESTAMP,
+    finished_at      TIMESTAMP,
+    duration_ms      BIGINT,
+    creator          VARCHAR(64),
+    create_time      TIMESTAMP,
+    updater          VARCHAR(64),
+    update_time      TIMESTAMP,
+    version          INT           DEFAULT 0,
+    del_flag         TINYINT       DEFAULT 0,
+    CONSTRAINT uk_dd_agent_execution UNIQUE (task_id, graph_code, node_id, execution_no)
+);

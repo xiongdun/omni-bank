@@ -42,6 +42,8 @@ public class TaskStateMachine {
                 EnumSet.of(TaskStatus.COMPLETED, TaskStatus.RETURNED, TaskStatus.CANCELLED));
         map.put(TaskStatus.RETURNED,
                 EnumSet.of(TaskStatus.REANALYZING, TaskStatus.REPORT_GENERATING, TaskStatus.CANCELLED));
+        // 失败任务允许断点恢复：复用历史成功节点，重新执行失败与跳过节点
+        map.put(TaskStatus.FAILED, EnumSet.of(TaskStatus.ANALYZING));
         TRANSITIONS = Collections.unmodifiableMap(map);
     }
 

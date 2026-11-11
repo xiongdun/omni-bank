@@ -94,16 +94,20 @@ class DdPlannerIntegrationTest {
 
         GraphResult result = graphExecutor.execute(graphFactory.build(plan), taskId);
 
-        assertThat(result.getNodes().get(DdAgentCatalog.SUBJECT_VERIFICATION).getStatus())
-                .isEqualTo(GraphNodeStatus.SUCCEEDED);
-        List<String> notDelivered = DdAgentCatalog.all().stream()
-                .map(DdAgentCatalog.AgentSpec::agentCode)
-                .filter(code -> !DdAgentCatalog.SUBJECT_VERIFICATION.equals(code))
-                .toList();
-        assertThat(notDelivered).hasSize(11).allSatisfy(code ->
-                assertThat(result.getNodes().get(code).getStatus()).isEqualTo(GraphNodeStatus.NOT_DELIVERED));
+        List<String> delivered = List.of(DdAgentCatalog.SUBJECT_VERIFICATION,
+                DdAgentCatalog.DOCUMENT_RECOGNITION, DdAgentCatalog.FINANCIAL_ANALYSIS,
+                DdAgentCatalog.JUDICIAL_RISK, DdAgentCatalog.CREDIT_DEBT_ANALYSIS,
+                DdAgentCatalog.SITE_VISIT, DdAgentCatalog.INDUSTRY_EXPERT,
+                DdAgentCatalog.LOAN_PURPOSE_ANALYSIS, DdAgentCatalog.FRAUD_DETECTION,
+                DdAgentCatalog.POLICY_MATCHING);
+        assertThat(delivered).allSatisfy(code ->
+                assertThat(result.getNodes().get(code).getStatus()).as("节点：%s", code)
+                        .isEqualTo(GraphNodeStatus.SUCCEEDED));
+        List.of(DdAgentCatalog.COMPREHENSIVE_RISK_ASSESSMENT, DdAgentCatalog.DUE_DILIGENCE_REPORT)
+                .forEach(code -> assertThat(result.getNodes().get(code).getStatus()).as("节点：%s", code)
+                        .isEqualTo(GraphNodeStatus.NOT_DELIVERED));
         assertThat(result.getNodes().get("join.0").getStatus()).isEqualTo(GraphNodeStatus.SUCCEEDED);
-        assertThat(result.getNodes().get("join.0").getSummary()).contains("未交付");
+        assertThat(result.getNodes().get("join.0").getSummary()).contains("成功 2");
         assertThat(result.getStatus()).as("节点执行明细：%s", result.getNodes())
                 .isEqualTo(com.omnibank.service.agent.dd.graph.GraphExecutionStatus.SUCCEEDED);
     }
