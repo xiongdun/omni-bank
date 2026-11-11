@@ -28,6 +28,9 @@ public class GraphNodeResult {
     /** Agent 原始结果，跳过的节点为空 */
     private AgentResult<?> result;
 
+    /** 是否为断点恢复复用的历史成功结果 */
+    private boolean reused;
+
     private LocalDateTime startedAt;
 
     private LocalDateTime finishedAt;

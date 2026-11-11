@@ -224,3 +224,33 @@ CREATE TABLE IF NOT EXISTS dd_plan (
     UNIQUE KEY uk_task_plan_version (task_id, plan_version),
     KEY idx_task_id (task_id)
 ) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COMMENT '尽调计划（P4 Planner）';
+
+CREATE TABLE IF NOT EXISTS dd_agent_execution (
+    id               BIGINT        NOT NULL COMMENT '主键（雪花）',
+    task_id          BIGINT        NOT NULL COMMENT '任务ID',
+    plan_id          BIGINT        DEFAULT NULL COMMENT '计划ID（未关联计划的直接调度为空）',
+    graph_code       VARCHAR(128)  NOT NULL COMMENT 'Graph 编码',
+    node_id          VARCHAR(128)  NOT NULL COMMENT '节点ID',
+    agent_code       VARCHAR(64)   DEFAULT NULL COMMENT 'Agent 编码（汇聚节点为空）',
+    execution_no     INT           NOT NULL DEFAULT 1 COMMENT '同一任务同一节点的执行序号，恢复重跑递增',
+    execution_status VARCHAR(32)   NOT NULL COMMENT '执行状态：SUCCEEDED / FAILED / SKIPPED / NOT_DELIVERED',
+    summary          VARCHAR(1000) DEFAULT NULL COMMENT '结果摘要',
+    error_message    VARCHAR(1000) DEFAULT NULL COMMENT '失败或跳过原因',
+    input_snapshot   JSON          DEFAULT NULL COMMENT '节点输入快照',
+    result_content   JSON          DEFAULT NULL COMMENT 'AgentResult 结果快照（含 findings / dataGaps / evidenceRefs）',
+    model_version    VARCHAR(128)  DEFAULT NULL COMMENT '模型版本',
+    prompt_version   VARCHAR(64)   DEFAULT NULL COMMENT 'Prompt 版本',
+    started_at       DATETIME(3)   DEFAULT NULL COMMENT '开始时间',
+    finished_at      DATETIME(3)   DEFAULT NULL COMMENT '结束时间',
+    duration_ms      BIGINT        DEFAULT NULL COMMENT '耗时（毫秒）',
+    creator          VARCHAR(64)   DEFAULT NULL COMMENT '创建人',
+    create_time      DATETIME(3)   NOT NULL DEFAULT CURRENT_TIMESTAMP(3) COMMENT '创建时间',
+    updater          VARCHAR(64)   DEFAULT NULL COMMENT '更新人',
+    update_time      DATETIME(3)   NOT NULL DEFAULT CURRENT_TIMESTAMP(3) ON UPDATE CURRENT_TIMESTAMP(3) COMMENT '更新时间',
+    version          INT           NOT NULL DEFAULT 0 COMMENT '乐观锁版本',
+    del_flag         TINYINT       NOT NULL DEFAULT 0 COMMENT '删除标志：0 未删 1 已删',
+    PRIMARY KEY (id),
+    UNIQUE KEY uk_task_graph_node_no (task_id, graph_code, node_id, execution_no),
+    KEY idx_task_id (task_id),
+    KEY idx_task_status (task_id, execution_status)
+) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COMMENT 'Agent 节点执行记录（P5 持久化与断点恢复）';

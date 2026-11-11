@@ -6,6 +6,8 @@ import com.omnibank.common.mybatis.util.PageResults;
 import com.omnibank.service.agent.dd.config.DdSseRegistry;
 import com.omnibank.service.agent.dd.dto.evidence.EvidenceListVO;
 import com.omnibank.service.agent.dd.dto.evidence.EvidenceQueryReq;
+import com.omnibank.service.agent.dd.dto.execution.AgentExecutionQueryReq;
+import com.omnibank.service.agent.dd.dto.execution.AgentExecutionVO;
 import com.omnibank.service.agent.dd.dto.scenario.ScenarioVO;
 import com.omnibank.service.agent.dd.dto.task.CreateTaskReq;
 import com.omnibank.service.agent.dd.dto.task.TaskContextVO;
@@ -14,6 +16,8 @@ import com.omnibank.service.agent.dd.dto.task.TaskDetailVO;
 import com.omnibank.service.agent.dd.dto.task.TaskListVO;
 import com.omnibank.service.agent.dd.dto.task.TaskQueryReq;
 import com.omnibank.service.agent.dd.dto.task.TaskStatusVO;
+import com.omnibank.service.agent.dd.plan.DdPlanScheduler;
+import com.omnibank.service.agent.dd.service.DdAgentExecutionService;
 import com.omnibank.service.agent.dd.service.DdEvidenceService;
 import com.omnibank.service.agent.dd.service.DdScenarioService;
 import com.omnibank.service.agent.dd.service.DdTaskService;
@@ -46,6 +50,10 @@ public class DdTaskController {
     private final DdEvidenceService evidenceService;
 
     private final DdSseRegistry sseRegistry;
+
+    private final DdPlanScheduler planScheduler;
+
+    private final DdAgentExecutionService executionService;
 
     /** 创建尽调任务（草稿） */
     @PostMapping
@@ -119,5 +127,19 @@ public class DdTaskController {
     @GetMapping("/{taskId}/evidences")
     public Result<PageResult<EvidenceListVO>> evidences(@PathVariable Long taskId, EvidenceQueryReq req) {
         return Result.success(PageResults.from(evidenceService.page(taskId, req)));
+    }
+
+    /** 失败任务断点恢复：复用历史成功节点，重新执行失败与跳过节点 */
+    @PostMapping("/{taskId}/resume")
+    public Result<TaskStatusVO> resume(@PathVariable Long taskId) {
+        planScheduler.resume(taskId);
+        return Result.success(taskService.status(taskId));
+    }
+
+    /** Agent 执行记录分页 */
+    @GetMapping("/{taskId}/executions")
+    public Result<PageResult<AgentExecutionVO>> executions(@PathVariable Long taskId,
+                                                           AgentExecutionQueryReq req) {
+        return Result.success(PageResults.from(executionService.page(taskId, req)));
     }
 }

@@ -238,6 +238,24 @@ public class DdTaskServiceImpl extends ServiceImpl<DdTaskMapper, DdTask> impleme
     }
 
     @Override
+    public boolean beginResume(Long taskId) {
+        int rows = baseMapper.update(null, Wrappers.<DdTask>lambdaUpdate()
+                .eq(DdTask::getId, taskId)
+                .eq(DdTask::getTaskStatus, TaskStatus.FAILED.name())
+                .set(DdTask::getTaskStatus, TaskStatus.ANALYZING.name())
+                .set(DdTask::getCurrentStage, TaskStatus.ANALYZING.name())
+                .set(DdTask::getLastErrorCode, null)
+                .set(DdTask::getLastErrorMessage, null)
+                .set(DdTask::getUpdater, currentOperator())
+                .setSql("version = version + 1"));
+        if (rows != 1) {
+            return false;
+        }
+        sseRegistry.publish(taskId, "task-status", status(taskId));
+        return true;
+    }
+
+    @Override
     public void updateCurrentPlan(Long taskId, Long planId) {
         int rows = baseMapper.update(null, Wrappers.<DdTask>lambdaUpdate()
                 .eq(DdTask::getId, taskId)

@@ -51,6 +51,9 @@ public interface DdTaskService {
     /** 计划调度完成：DATA_COLLECTING -> ANALYZING */
     void markAnalyzing(Long taskId);
 
+    /** 失败任务恢复执行：FAILED -> ANALYZING，条件更新保证并发幂等；状态不符返回 false */
+    boolean beginResume(Long taskId);
+
     /** 更新任务当前计划ID */
     void updateCurrentPlan(Long taskId, Long planId);
 

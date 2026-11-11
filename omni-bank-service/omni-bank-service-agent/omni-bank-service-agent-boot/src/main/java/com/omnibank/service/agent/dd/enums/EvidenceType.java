@@ -18,6 +18,7 @@ public enum EvidenceType {
     CUSTOMER_DOCUMENT("客户上传材料"),
     CALCULATION("系统计算结果"),
     POLICY_DOCUMENT("制度文件"),
+    INDUSTRY_RESEARCH("行业研究"),
     MANUAL_INPUT("人工录入");
 
     private final String desc;

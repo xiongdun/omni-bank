@@ -14,6 +14,7 @@ import com.omnibank.service.agent.dd.ai.AgentExecutionStatus;
 import com.omnibank.service.agent.dd.ai.AgentRegistry;
 import com.omnibank.service.agent.dd.ai.AgentResult;
 import com.omnibank.service.agent.dd.ai.AgentRuntime;
+import com.omnibank.service.agent.dd.service.DdAgentExecutionService;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -35,7 +36,7 @@ import org.springframework.stereotype.Component;
  * Agent 编排执行器：基于 Spring AI Alibaba Graph（StateGraph / CompiledGraph）实现。
  * 业务 Graph 定义转换为 StateGraph 的节点与边，由框架负责依赖等待与并行调度；
  * 节点动作仅负责调用 AgentRuntime，并在上游未成功时将自身标记 SKIPPED，避免单点失败终止整图。
- * 节点执行记录持久化与断点恢复由后续阶段实现。
+ * 每个 Agent 节点的执行结果落库；恢复执行时复用最新成功记录，失败与跳过节点重新执行。
  */
 @Slf4j
 @Component
@@ -47,16 +48,30 @@ public class GraphExecutor {
 
     private final AgentRegistry agentRegistry;
 
+    private final DdAgentExecutionService executionService;
+
     private final Executor executor;
 
     public GraphExecutor(AgentRuntime agentRuntime, AgentRegistry agentRegistry,
+                         DdAgentExecutionService executionService,
                          @Qualifier("ttlExecutor") Executor executor) {
         this.agentRuntime = agentRuntime;
         this.agentRegistry = agentRegistry;
+        this.executionService = executionService;
         this.executor = executor;
     }
 
     public GraphResult execute(GraphDefinition definition, Long taskId) {
+        return execute(definition, taskId, null, false);
+    }
+
+    /**
+     * 执行 Graph。
+     *
+     * @param planId 关联计划ID，直接调度时为空
+     * @param resume 是否断点恢复：复用历史成功节点结果，其余节点重新执行
+     */
+    public GraphResult execute(GraphDefinition definition, Long taskId, Long planId, boolean resume) {
         List<GraphNode> nodes = validate(definition);
         GraphResult graphResult = new GraphResult();
         graphResult.setGraphCode(definition.getGraphCode());
@@ -68,7 +83,10 @@ public class GraphExecutor {
             // 节点结果在框架执行过程中直接收集：Graph 返回的终态经过 StateSerializer 序列化克隆，
             // 自定义结果对象会被还原为 Map，无法按类型读取
             Map<String, GraphNodeResult> collected = new ConcurrentHashMap<>();
-            CompiledGraph compiledGraph = buildGraph(definition.getGraphCode(), nodes, taskId, collected);
+            Map<String, GraphNodeResult> reusable = resume
+                    ? executionService.loadSucceeded(taskId, definition.getGraphCode()) : Map.of();
+            CompiledGraph compiledGraph = buildGraph(definition.getGraphCode(), nodes, taskId, planId,
+                    reusable, collected);
             RunnableConfig runnableConfig = RunnableConfig.builder()
                     // 并行节点统一走 TTL 装饰的业务线程池，保证用户上下文与追踪信息可传递
                     .defaultParallelExecutor(executor)
@@ -96,15 +114,16 @@ public class GraphExecutor {
         return graphResult;
     }
 
-    private CompiledGraph buildGraph(String graphCode, List<GraphNode> nodes, Long taskId,
+    private CompiledGraph buildGraph(String graphCode, List<GraphNode> nodes, Long taskId, Long planId,
+                                     Map<String, GraphNodeResult> reusable,
                                      Map<String, GraphNodeResult> collected) {
         Map<String, KeyStrategy> keyStrategies = new HashMap<>();
         nodes.forEach(node -> keyStrategies.put(resultKey(node.nodeId()), new ReplaceStrategy()));
         StateGraph stateGraph = new StateGraph(graphCode, () -> keyStrategies);
         try {
             for (GraphNode node : nodes) {
-                stateGraph.addNode(node.nodeId(),
-                        AsyncNodeAction.node_async(state -> executeNode(state, node, taskId, collected)));
+                stateGraph.addNode(node.nodeId(), AsyncNodeAction.node_async(
+                        state -> executeNode(state, node, taskId, planId, graphCode, reusable, collected)));
             }
 
             Set<String> dependents = new HashSet<>();
@@ -128,7 +147,8 @@ public class GraphExecutor {
         }
     }
 
-    private Map<String, Object> executeNode(OverAllState state, GraphNode node, Long taskId,
+    private Map<String, Object> executeNode(OverAllState state, GraphNode node, Long taskId, Long planId,
+                                            String graphCode, Map<String, GraphNodeResult> reusable,
                                             Map<String, GraphNodeResult> collected) {
         Map<String, GraphNodeResult> dependencyResults = new LinkedHashMap<>();
         for (String dependency : node.dependsOn()) {
@@ -140,17 +160,39 @@ public class GraphExecutor {
             // 汇聚节点只做同步点，上游失败或未交付时仍然放行，由下游按数据缺口自行处理
             nodeResult = joinResult(node, dependencyResults);
         } else {
+            GraphNodeResult previous = reusable.get(node.nodeId());
             String blockedDependency = blockedDependency(node, dependencyResults);
-            if (blockedDependency != null) {
+            if (previous != null) {
+                // 断点恢复：历史成功节点直接复用结果，不再调用 Agent，也不重复写执行记录
+                nodeResult = reusedResult(previous);
+            } else if (blockedDependency != null) {
                 nodeResult = skipped(node, blockedDependency);
             } else if (!agentRegistry.contains(node.agentCode())) {
                 nodeResult = notDelivered(node);
             } else {
                 nodeResult = executeNodeInternal(node, taskId, upstream(dependencyResults));
             }
+            if (previous == null) {
+                executionService.record(taskId, planId, graphCode, node, nodeResult);
+            }
         }
         collected.put(node.nodeId(), nodeResult);
         return Map.of(resultKey(node.nodeId()), nodeResult);
+    }
+
+    private GraphNodeResult reusedResult(GraphNodeResult previous) {
+        GraphNodeResult nodeResult = new GraphNodeResult();
+        nodeResult.setNodeId(previous.getNodeId());
+        nodeResult.setAgentCode(previous.getAgentCode());
+        nodeResult.setStatus(GraphNodeStatus.SUCCEEDED);
+        nodeResult.setExecutionId(previous.getExecutionId());
+        nodeResult.setSummary(previous.getSummary());
+        nodeResult.setResult(previous.getResult());
+        nodeResult.setReused(true);
+        nodeResult.setStartedAt(previous.getStartedAt());
+        nodeResult.setFinishedAt(previous.getFinishedAt());
+        nodeResult.setDurationMs(previous.getDurationMs());
+        return nodeResult;
     }
 
     /** 下游可见的上游结果：普通节点按节点ID注入，汇聚节点展开其聚合结果 */
