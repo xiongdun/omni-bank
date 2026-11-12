@@ -195,3 +195,29 @@ CREATE TABLE IF NOT EXISTS dd_agent_execution (
     del_flag         TINYINT       DEFAULT 0,
     CONSTRAINT uk_dd_agent_execution UNIQUE (task_id, graph_code, node_id, execution_no)
 );
+
+CREATE TABLE IF NOT EXISTS dd_due_diligence_report (
+    id               BIGINT        NOT NULL PRIMARY KEY,
+    task_id          BIGINT        NOT NULL,
+    report_no        VARCHAR(64)   NOT NULL,
+    report_version   INT           NOT NULL DEFAULT 1,
+    report_status    VARCHAR(32)   NOT NULL,
+    review_status    VARCHAR(32)   NOT NULL,
+    title            VARCHAR(256),
+    content_json     VARCHAR(64000),
+    evidence_ids     VARCHAR(16000),
+    evidence_count   INT           NOT NULL DEFAULT 0,
+    data_gap_count   INT           NOT NULL DEFAULT 0,
+    supplement_count INT           NOT NULL DEFAULT 0,
+    export_status    VARCHAR(32),
+    model_version    VARCHAR(128),
+    prompt_version   VARCHAR(64),
+    generated_at     TIMESTAMP,
+    creator          VARCHAR(64),
+    create_time      TIMESTAMP,
+    updater          VARCHAR(64),
+    update_time      TIMESTAMP,
+    version          INT           DEFAULT 0,
+    del_flag         TINYINT       DEFAULT 0,
+    CONSTRAINT uk_dd_due_diligence_report UNIQUE (task_id, report_version)
+);

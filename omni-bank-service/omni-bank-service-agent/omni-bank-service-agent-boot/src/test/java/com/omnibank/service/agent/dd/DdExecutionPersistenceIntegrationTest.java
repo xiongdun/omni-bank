@@ -102,12 +102,12 @@ class DdExecutionPersistenceIntegrationTest {
         assertThat(execution.getExecutionNo()).isEqualTo(1);
         assertThat(execution.getDurationMs()).isGreaterThanOrEqualTo(0);
 
-        AgentExecutionQueryReq undeliveredReq = new AgentExecutionQueryReq();
-        undeliveredReq.setNodeId("COMPREHENSIVE_RISK_ASSESSMENT");
-        assertThat(executionService.page(taskId, undeliveredReq).getRecords())
+        AgentExecutionQueryReq reportReq = new AgentExecutionQueryReq();
+        reportReq.setNodeId("DUE_DILIGENCE_REPORT");
+        assertThat(executionService.page(taskId, reportReq).getRecords())
                 .singleElement()
                 .satisfies(record -> assertThat(record.getExecutionStatus())
-                        .isEqualTo(GraphNodeStatus.NOT_DELIVERED.name()));
+                        .isEqualTo(GraphNodeStatus.SUCCEEDED.name()));
     }
 
     @Test

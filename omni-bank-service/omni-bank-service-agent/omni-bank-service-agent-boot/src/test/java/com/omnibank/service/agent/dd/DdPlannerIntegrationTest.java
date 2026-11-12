@@ -30,7 +30,7 @@ import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
 /**
- * P4 集成测试：MOCK 模式计划生成与版本落库、计划转 Graph 调度、未交付 Agent 标记
+ * P4 集成测试：MOCK 模式计划生成与版本落库、计划转 Graph 调度、全量 Agent 执行
  */
 @SpringBootTest(classes = DdTestApplication.class)
 @ActiveProfiles("h2")
@@ -87,7 +87,7 @@ class DdPlannerIntegrationTest {
     }
 
     @Test
-    void Graph将未交付Agent标记为NOT_DELIVERED且整图继续() {
+    void Graph调度全部已交付Agent并保持汇聚节点成功() {
         long taskId = submittedTask("APPGRAPH" + System.nanoTime());
         DdTask task = taskService.requireTask(taskId);
         DdPlan plan = planMapper.selectById(task.getCurrentPlanId());
@@ -99,13 +99,13 @@ class DdPlannerIntegrationTest {
                 DdAgentCatalog.JUDICIAL_RISK, DdAgentCatalog.CREDIT_DEBT_ANALYSIS,
                 DdAgentCatalog.SITE_VISIT, DdAgentCatalog.INDUSTRY_EXPERT,
                 DdAgentCatalog.LOAN_PURPOSE_ANALYSIS, DdAgentCatalog.FRAUD_DETECTION,
-                DdAgentCatalog.POLICY_MATCHING);
+                DdAgentCatalog.POLICY_MATCHING, DdAgentCatalog.COMPREHENSIVE_RISK_ASSESSMENT,
+                DdAgentCatalog.DUE_DILIGENCE_REPORT);
         assertThat(delivered).allSatisfy(code ->
                 assertThat(result.getNodes().get(code).getStatus()).as("节点：%s", code)
                         .isEqualTo(GraphNodeStatus.SUCCEEDED));
-        List.of(DdAgentCatalog.COMPREHENSIVE_RISK_ASSESSMENT, DdAgentCatalog.DUE_DILIGENCE_REPORT)
-                .forEach(code -> assertThat(result.getNodes().get(code).getStatus()).as("节点：%s", code)
-                        .isEqualTo(GraphNodeStatus.NOT_DELIVERED));
+        assertThat(result.getNodes().values())
+                .noneMatch(node -> node.getStatus() == GraphNodeStatus.NOT_DELIVERED);
         assertThat(result.getNodes().get("join.0").getStatus()).isEqualTo(GraphNodeStatus.SUCCEEDED);
         assertThat(result.getNodes().get("join.0").getSummary()).contains("成功 2");
         assertThat(result.getStatus()).as("节点执行明细：%s", result.getNodes())
