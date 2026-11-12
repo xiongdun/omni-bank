@@ -33,7 +33,8 @@ public class TaskStateMachine {
         map.put(TaskStatus.WAITING_FOR_SUPPLEMENT,
                 EnumSet.of(TaskStatus.REANALYZING, TaskStatus.CANCELLED));
         map.put(TaskStatus.REANALYZING,
-                EnumSet.of(TaskStatus.RISK_ASSESSING, TaskStatus.FAILED, TaskStatus.CANCELLED));
+                EnumSet.of(TaskStatus.RISK_ASSESSING, TaskStatus.WAITING_FOR_SUPPLEMENT, TaskStatus.FAILED,
+                        TaskStatus.CANCELLED));
         map.put(TaskStatus.RISK_ASSESSING, EnumSet.of(TaskStatus.REPORT_GENERATING, TaskStatus.FAILED,
                 TaskStatus.CANCELLED));
         map.put(TaskStatus.REPORT_GENERATING, EnumSet.of(TaskStatus.WAITING_FOR_REVIEW, TaskStatus.FAILED,

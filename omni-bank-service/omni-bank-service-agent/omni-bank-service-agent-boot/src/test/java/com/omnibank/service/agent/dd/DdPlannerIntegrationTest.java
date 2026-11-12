@@ -65,7 +65,8 @@ class DdPlannerIntegrationTest {
         long taskId = submittedTask("APPPLAN" + System.nanoTime());
 
         DdTask task = taskService.requireTask(taskId);
-        assertThat(task.getTaskStatus()).isEqualTo(TaskStatus.ANALYZING.name());
+        assertThat(task.getTaskStatus()).isIn(TaskStatus.WAITING_FOR_SUPPLEMENT.name(),
+                TaskStatus.WAITING_FOR_REVIEW.name());
         assertThat(task.getCurrentPlanId()).isNotNull();
         assertThat(task.getLastErrorCode()).isNull();
 

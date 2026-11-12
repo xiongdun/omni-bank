@@ -41,7 +41,9 @@ public class DdScenarioServiceImpl extends ServiceImpl<DdBusinessScenarioMapper,
     /** 允许人工重新识别的任务状态 */
     private static final List<TaskStatus> REIDENTIFY_ALLOWED = List.of(
             TaskStatus.DRAFT, TaskStatus.PLANNING, TaskStatus.DATA_COLLECTING,
-            TaskStatus.ANALYZING, TaskStatus.WAITING_FOR_SUPPLEMENT, TaskStatus.RETURNED);
+            TaskStatus.ANALYZING, TaskStatus.RISK_ASSESSING, TaskStatus.REPORT_GENERATING,
+            TaskStatus.WAITING_FOR_SUPPLEMENT, TaskStatus.WAITING_FOR_REVIEW,
+            TaskStatus.REANALYZING, TaskStatus.RETURNED);
 
     private final DdTaskMapper taskMapper;
 

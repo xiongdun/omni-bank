@@ -327,4 +327,4 @@ docs: 补充 agent 域接口说明
 | [README.md](README.md) | 工程结构、版本管理机制、公共组件用法、快速开始 |
 | `docs/sql/omni_bank_sys.sql` | 系统管理域 15 张表 + 初始化数据（admin/admin123） |
 | `docs/sql/omni_bank_ai.sql` | 智能体域 3 张表 + 初始智能体 |
-| `docs/sql/omni_bank_dd.sql` | 对公信贷尽调域 10 张表（含计划、执行记录、尽调报告与复核留痕）与 Outbox 事件表 |
+| `docs/sql/omni_bank_dd.sql` | 对公信贷尽调域 12 张表（含计划、执行记录、尽调报告与复核留痕、风险线索、补充材料请求及 Outbox 事件表） |

@@ -60,7 +60,7 @@ class DdEvidenceIntegrationTest {
                 .containsExactlyInAnyOrder("MOCK_ENTERPRISE_REGISTRY", "MOCK_JUDICIAL_PLATFORM", "MOCK_CREDIT_BUREAU");
         assertThat(page.getRecords()).allMatch(record -> record.getSourceType() != null);
         assertThat(taskService.context(taskId).getEvidenceIds()).hasSize(3);
-        assertThat(taskService.status(taskId).getTaskStatus()).isEqualTo("ANALYZING");
+        assertThat(taskService.status(taskId).getTaskStatus()).isEqualTo("WAITING_FOR_REVIEW");
     }
 
     @Test

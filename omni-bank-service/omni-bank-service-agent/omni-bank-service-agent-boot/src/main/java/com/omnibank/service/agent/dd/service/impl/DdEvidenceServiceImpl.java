@@ -11,14 +11,22 @@ import com.omnibank.service.agent.dd.adapter.ExternalDataQuery;
 import com.omnibank.service.agent.dd.dto.evidence.EvidenceDetailVO;
 import com.omnibank.service.agent.dd.dto.evidence.EvidenceListVO;
 import com.omnibank.service.agent.dd.dto.evidence.EvidenceQueryReq;
+import com.omnibank.service.agent.dd.dto.evidence.EvidenceReferenceVO;
+import com.omnibank.service.agent.dd.dto.report.ReportReviewVO;
+import com.omnibank.service.agent.dd.dto.report.ReportVersionVO;
+import com.omnibank.service.agent.dd.entity.DdDueDiligenceReport;
 import com.omnibank.service.agent.dd.entity.DdEnterprise;
 import com.omnibank.service.agent.dd.entity.DdEvidence;
+import com.omnibank.service.agent.dd.entity.DdReportReview;
 import com.omnibank.service.agent.dd.entity.DdTask;
 import com.omnibank.service.agent.dd.enums.EvidenceStatus;
 import com.omnibank.service.agent.dd.mapper.DdEvidenceMapper;
 import com.omnibank.service.agent.dd.service.DdEnterpriseService;
 import com.omnibank.service.agent.dd.service.DdEvidenceService;
+import com.omnibank.service.agent.dd.service.DdFindingService;
+import com.omnibank.service.agent.dd.service.DdReportService;
 import com.omnibank.service.agent.dd.service.DdTaskService;
+import com.omnibank.service.agent.dd.support.DdJsonSupport;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -38,6 +46,12 @@ public class DdEvidenceServiceImpl extends ServiceImpl<DdEvidenceMapper, DdEvide
     private final DdTaskService taskService;
 
     private final DdEnterpriseService enterpriseService;
+
+    private final DdFindingService findingService;
+
+    private final DdReportService reportService;
+
+    private final DdJsonSupport jsonSupport;
 
     private final List<ExternalDataAdapter> adapters;
 
@@ -116,6 +130,26 @@ public class DdEvidenceServiceImpl extends ServiceImpl<DdEvidenceMapper, DdEvide
         return toDetailVO(entity);
     }
 
+    @Override
+    public EvidenceReferenceVO references(Long evidenceId) {
+        DdEvidence entity = getById(evidenceId);
+        if (entity == null) {
+            throw new BizException(DdErrorCode.EVIDENCE_NOT_FOUND);
+        }
+        Long taskId = entity.getTaskId();
+        EvidenceReferenceVO vo = new EvidenceReferenceVO();
+        vo.setEvidenceId(evidenceId);
+        vo.setTaskId(taskId);
+        vo.setFindings(findingService.listByEvidence(taskId, evidenceId));
+        vo.setReports(reportService.listByEvidence(taskId, evidenceId).stream()
+                .map(this::toReportVersionVO)
+                .toList());
+        vo.setReviews(reportService.listReviewsByEvidence(taskId, evidenceId).stream()
+                .map(this::toReportReviewVO)
+                .toList());
+        return vo;
+    }
+
     /** 以任务 + 来源系统 + 来源引用作为幂等键，重复采集直接跳过 */
     private boolean exists(Long taskId, ExternalDataItem item) {
         return lambdaQuery()
@@ -159,8 +193,43 @@ public class DdEvidenceServiceImpl extends ServiceImpl<DdEvidenceMapper, DdEvide
         return vo;
     }
 
-    private EvidenceDetailVO toDetailVO(DdEvidence entity) {
-        EvidenceDetailVO vo = new EvidenceDetailVO();
+    private ReportVersionVO toReportVersionVO(DdDueDiligenceReport report) {
+        ReportVersionVO vo = new ReportVersionVO();
+        vo.setId(report.getId());
+        vo.setTaskId(report.getTaskId());
+        vo.setReportNo(report.getReportNo());
+        vo.setReportVersion(report.getReportVersion());
+        vo.setReportStatus(report.getReportStatus());
+        vo.setReviewStatus(report.getReviewStatus());
+        vo.setTitle(report.getTitle());
+        vo.setEvidenceCount(report.getEvidenceCount());
+        vo.setDataGapCount(report.getDataGapCount());
+        vo.setSupplementCount(report.getSupplementCount());
+        vo.setExportStatus(report.getExportStatus());
+        vo.setModelVersion(report.getModelVersion());
+        vo.setPromptVersion(report.getPromptVersion());
+        vo.setGeneratedAt(report.getGeneratedAt());
+        return vo;
+    }
+
+    private ReportReviewVO toReportReviewVO(DdReportReview review) {
+        ReportReviewVO vo = new ReportReviewVO();
+        vo.setId(review.getId());
+        vo.setActionType(review.getActionType());
+        vo.setFromStatus(review.getFromStatus());
+        vo.setToStatus(review.getToStatus());
+        vo.setFieldKey(review.getFieldKey());
+        vo.setOriginalValue(review.getOriginalValue());
+        vo.setAmendedValue(review.getAmendedValue());
+        vo.setReviewer(review.getReviewer());
+        vo.setReason(review.getReason());
+        vo.setRemark(review.getRemark());
+        vo.setEvidenceIds(jsonSupport.readStringList(review.getEvidenceIds()));
+        vo.setCreateTime(review.getCreateTime());
+        return vo;
+    }
+
+    private EvidenceDetailVO toDetailVO(DdEvidence entity) {        EvidenceDetailVO vo = new EvidenceDetailVO();
         vo.setEvidenceId(entity.getId());
         vo.setTaskId(entity.getTaskId());
         vo.setEnterpriseId(entity.getEnterpriseId());

@@ -43,7 +43,11 @@ public enum DdErrorCode implements ErrorCode {
     REPORT_STATUS_NOT_ALLOWED("230130", "报告当前状态不允许该复核操作"),
     REPORT_CHAPTER_NOT_FOUND("230131", "报告章节不存在"),
     REPORT_CONFLICT("230132", "报告已被并发修改，请刷新后重试"),
-    REPORT_REVIEW_PARAM_INVALID("230133", "复核参数不完整或非法");
+    REPORT_REVIEW_PARAM_INVALID("230133", "复核参数不完整或非法"),
+    FINDING_NOT_FOUND("230134", "风险线索不存在"),
+    SUPPLEMENT_REQUEST_NOT_FOUND("230135", "补充材料请求不存在"),
+    SUPPLEMENT_REQUEST_STATUS_NOT_ALLOWED("230136", "补充材料请求当前状态不允许该操作"),
+    PLAN_NOT_FOUND("230137", "尽调计划不存在");
 
     private final String code;
 

@@ -51,6 +51,27 @@ public interface DdTaskService {
     /** 计划调度完成：DATA_COLLECTING -> ANALYZING */
     void markAnalyzing(Long taskId);
 
+    /** 分析完成且无待补充资料：ANALYZING / REANALYZING -> RISK_ASSESSING */
+    void markRiskAssessing(Long taskId);
+
+    /** 风险评估完成：RISK_ASSESSING -> REPORT_GENERATING */
+    void markReportGenerating(Long taskId);
+
+    /** 分析完成且存在待补充资料：ANALYZING / REANALYZING -> WAITING_FOR_SUPPLEMENT */
+    void markWaitingForSupplement(Long taskId);
+
+    /** 报告生成完成：REPORT_GENERATING -> WAITING_FOR_REVIEW */
+    void markWaitingForReview(Long taskId);
+
+    /** 补充材料完成或报告要求重新分析：WAITING_FOR_SUPPLEMENT / RETURNED -> REANALYZING */
+    boolean beginReanalyzing(Long taskId);
+
+    /** 报告定稿联动：WAITING_FOR_REVIEW -> COMPLETED，状态不符返回 false */
+    boolean markCompletedIfWaitingForReview(Long taskId);
+
+    /** 报告驳回 / 要求补材料联动：WAITING_FOR_REVIEW -> RETURNED，状态不符返回 false */
+    boolean markReturnedIfWaitingForReview(Long taskId);
+
     /** 失败任务恢复执行：FAILED -> ANALYZING，条件更新保证并发幂等；状态不符返回 false */
     boolean beginResume(Long taskId);
 

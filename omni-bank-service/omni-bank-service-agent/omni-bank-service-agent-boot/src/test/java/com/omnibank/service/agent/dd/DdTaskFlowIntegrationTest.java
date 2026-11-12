@@ -99,8 +99,8 @@ class DdTaskFlowIntegrationTest {
         outboxPublisher.publishPending();
 
         TaskStatusVO status = taskService.status(created.getTaskId());
-        assertThat(status.getTaskStatus()).isEqualTo("ANALYZING");
-        assertThat(status.getProgress()).isEqualTo(60);
+        assertThat(status.getTaskStatus()).isEqualTo("WAITING_FOR_REVIEW");
+        assertThat(status.getProgress()).isEqualTo(95);
 
         ScenarioVO scenario = scenarioService.latest(created.getTaskId());
         assertThat(scenario.getScenarioVersion()).isEqualTo(1);
@@ -130,7 +130,7 @@ class DdTaskFlowIntegrationTest {
         outboxPublisher.publishPending();
         DdTask afterSecond = taskMapper.selectById(created.getTaskId());
 
-        assertThat(afterSecond.getTaskStatus()).isEqualTo("ANALYZING");
+        assertThat(afterSecond.getTaskStatus()).isEqualTo("WAITING_FOR_REVIEW");
         assertThat(afterSecond.getAnalysisVersion()).isEqualTo(analysisVersion);
         assertThat(afterSecond.getVersion()).isEqualTo(afterFirst.getVersion());
     }
@@ -146,7 +146,7 @@ class DdTaskFlowIntegrationTest {
         assertThat(scenario.getBusinessType()).isEqualTo("OTHER");
         assertThat(scenario.getIdentifyStatus()).isEqualTo("NEEDS_CONFIRMATION");
         assertThat(scenario.getUncertainItems()).isNotEmpty();
-        assertThat(taskService.status(created.getTaskId()).getTaskStatus()).isEqualTo("ANALYZING");
+        assertThat(taskService.status(created.getTaskId()).getTaskStatus()).isEqualTo("WAITING_FOR_REVIEW");
     }
 
     @Test

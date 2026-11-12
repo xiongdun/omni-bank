@@ -238,6 +238,55 @@ public class DdTaskServiceImpl extends ServiceImpl<DdTaskMapper, DdTask> impleme
     }
 
     @Override
+    public void markRiskAssessing(Long taskId) {
+        transition(taskId, TaskStatus.RISK_ASSESSING, TaskStatus.ANALYZING, TaskStatus.REANALYZING);
+    }
+
+    @Override
+    public void markReportGenerating(Long taskId) {
+        transition(taskId, TaskStatus.REPORT_GENERATING, TaskStatus.RISK_ASSESSING);
+    }
+
+    @Override
+    public void markWaitingForSupplement(Long taskId) {
+        transition(taskId, TaskStatus.WAITING_FOR_SUPPLEMENT, TaskStatus.ANALYZING, TaskStatus.REANALYZING);
+    }
+
+    @Override
+    public void markWaitingForReview(Long taskId) {
+        transition(taskId, TaskStatus.WAITING_FOR_REVIEW, TaskStatus.REPORT_GENERATING);
+    }
+
+    @Override
+    public boolean beginReanalyzing(Long taskId) {
+        int rows = baseMapper.update(null, Wrappers.<DdTask>lambdaUpdate()
+                .eq(DdTask::getId, taskId)
+                .in(DdTask::getTaskStatus, TaskStatus.WAITING_FOR_SUPPLEMENT.name(),
+                        TaskStatus.RETURNED.name())
+                .set(DdTask::getTaskStatus, TaskStatus.REANALYZING.name())
+                .set(DdTask::getCurrentStage, TaskStatus.REANALYZING.name())
+                .set(DdTask::getLastErrorCode, null)
+                .set(DdTask::getLastErrorMessage, null)
+                .set(DdTask::getUpdater, currentOperator())
+                .setSql("version = version + 1"));
+        if (rows != 1) {
+            return false;
+        }
+        sseRegistry.publish(taskId, "task-status", status(taskId));
+        return true;
+    }
+
+    @Override
+    public boolean markCompletedIfWaitingForReview(Long taskId) {
+        return transitionIf(taskId, TaskStatus.COMPLETED, TaskStatus.WAITING_FOR_REVIEW);
+    }
+
+    @Override
+    public boolean markReturnedIfWaitingForReview(Long taskId) {
+        return transitionIf(taskId, TaskStatus.RETURNED, TaskStatus.WAITING_FOR_REVIEW);
+    }
+
+    @Override
     public boolean beginResume(Long taskId) {
         int rows = baseMapper.update(null, Wrappers.<DdTask>lambdaUpdate()
                 .eq(DdTask::getId, taskId)
@@ -275,7 +324,7 @@ public class DdTaskServiceImpl extends ServiceImpl<DdTaskMapper, DdTask> impleme
                 .eq(DdTask::getId, taskId)
                 .in(DdTask::getTaskStatus, TaskStatus.INITIALIZING.name(), TaskStatus.SCENARIO_IDENTIFYING.name(),
                         TaskStatus.PLANNING.name(), TaskStatus.DATA_COLLECTING.name(),
-                        TaskStatus.ANALYZING.name())
+                        TaskStatus.ANALYZING.name(), TaskStatus.REANALYZING.name())
                 .set(DdTask::getTaskStatus, TaskStatus.FAILED.name())
                 .set(DdTask::getCurrentStage, TaskStatus.FAILED.name())
                 .set(DdTask::getLastErrorCode, errorCode)
@@ -285,6 +334,33 @@ public class DdTaskServiceImpl extends ServiceImpl<DdTaskMapper, DdTask> impleme
         if (rows == 1) {
             sseRegistry.publish(taskId, "task-status", status(taskId));
         }
+    }
+
+    /** 条件流转：目标状态必须与来源状态匹配，否则抛状态冲突 */
+    private void transition(Long taskId, TaskStatus target, TaskStatus... sources) {
+        if (!transitionIf(taskId, target, sources)) {
+            throw new BizException(DdErrorCode.TASK_STATUS_CONFLICT);
+        }
+    }
+
+    /** 条件流转，来源状态不符返回 false；成功时推送状态事件 */
+    private boolean transitionIf(Long taskId, TaskStatus target, TaskStatus... sources) {
+        String[] from = new String[sources.length];
+        for (int index = 0; index < sources.length; index++) {
+            from[index] = sources[index].name();
+        }
+        int rows = baseMapper.update(null, Wrappers.<DdTask>lambdaUpdate()
+                .eq(DdTask::getId, taskId)
+                .in(DdTask::getTaskStatus, (Object[]) from)
+                .set(DdTask::getTaskStatus, target.name())
+                .set(DdTask::getCurrentStage, target.name())
+                .set(DdTask::getUpdater, currentOperator())
+                .setSql("version = version + 1"));
+        if (rows != 1) {
+            return false;
+        }
+        sseRegistry.publish(taskId, "task-status", status(taskId));
+        return true;
     }
 
     /** 状态流转：状态机校验 + 版本号条件更新，冲突即失败 */
