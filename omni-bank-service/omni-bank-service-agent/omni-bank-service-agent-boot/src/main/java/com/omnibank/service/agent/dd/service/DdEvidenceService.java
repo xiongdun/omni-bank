@@ -5,6 +5,7 @@ import com.omnibank.service.agent.dd.adapter.ExternalDataItem;
 import com.omnibank.service.agent.dd.dto.evidence.EvidenceDetailVO;
 import com.omnibank.service.agent.dd.dto.evidence.EvidenceListVO;
 import com.omnibank.service.agent.dd.dto.evidence.EvidenceQueryReq;
+import com.omnibank.service.agent.dd.dto.evidence.EvidenceReferenceVO;
 import java.util.List;
 
 /**
@@ -30,4 +31,7 @@ public interface DdEvidenceService {
 
     /** 证据详情，不存在抛业务异常 */
     EvidenceDetailVO detail(Long evidenceId);
+
+    /** 证据溯源：引用该证据的线索、报告版本与复核留痕 */
+    EvidenceReferenceVO references(Long evidenceId);
 }

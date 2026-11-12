@@ -34,4 +34,10 @@ public interface DdReportService {
 
     /** 查询指定版本报告的复核留痕，按时间正序 */
     List<DdReportReview> reviews(Long taskId, Integer reportVersion);
+
+    /** 引用指定证据的报告版本，按版本倒序 */
+    List<DdDueDiligenceReport> listByEvidence(Long taskId, Long evidenceId);
+
+    /** 复核留痕中关联指定证据的记录，按时间正序 */
+    List<DdReportReview> listReviewsByEvidence(Long taskId, Long evidenceId);
 }

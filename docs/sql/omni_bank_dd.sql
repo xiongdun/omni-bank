@@ -307,3 +307,56 @@ CREATE TABLE IF NOT EXISTS dd_report_review (
     KEY idx_review_task_version (task_id, report_version),
     KEY idx_review_report_id (report_id)
 ) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COMMENT '尽调报告人工复核留痕（P7）';
+
+CREATE TABLE IF NOT EXISTS dd_finding (
+    id                       BIGINT        NOT NULL COMMENT '主键（雪花）',
+    task_id                  BIGINT        NOT NULL COMMENT '任务ID',
+    plan_id                  BIGINT        DEFAULT NULL COMMENT '计划ID',
+    execution_id             BIGINT        DEFAULT NULL COMMENT 'Agent 执行记录ID（dd_agent_execution.id）',
+    agent_code               VARCHAR(64)   DEFAULT NULL COMMENT 'Agent 编码',
+    node_id                  VARCHAR(128)  DEFAULT NULL COMMENT 'Graph 节点ID',
+    finding_code             VARCHAR(64)   NOT NULL COMMENT '线索编码',
+    category                 VARCHAR(64)   DEFAULT NULL COMMENT '线索分类',
+    severity                 VARCHAR(32)   DEFAULT NULL COMMENT '严重程度：LOW / MEDIUM / HIGH / CRITICAL / UNKNOWN',
+    title                    VARCHAR(256)  DEFAULT NULL COMMENT '标题',
+    description              VARCHAR(4000) DEFAULT NULL COMMENT '描述',
+    confidence               DECIMAL(5, 4) DEFAULT NULL COMMENT '置信度',
+    status                   VARCHAR(32)   NOT NULL COMMENT '线索状态：CONFIRMED / NEEDS_VERIFICATION / MODEL_INFERENCE / REJECTED / RESOLVED',
+    evidence_refs            JSON          DEFAULT NULL COMMENT '关联证据引用',
+    related_finding_codes    JSON          DEFAULT NULL COMMENT '关联线索编码',
+    verification_suggestion  VARCHAR(1000) DEFAULT NULL COMMENT '核实建议',
+    creator                  VARCHAR(64)   DEFAULT NULL COMMENT '创建人',
+    create_time              DATETIME(3)   NOT NULL DEFAULT CURRENT_TIMESTAMP(3) COMMENT '创建时间',
+    updater                  VARCHAR(64)   DEFAULT NULL COMMENT '更新人',
+    update_time              DATETIME(3)   NOT NULL DEFAULT CURRENT_TIMESTAMP(3) ON UPDATE CURRENT_TIMESTAMP(3) COMMENT '更新时间',
+    version                  INT           NOT NULL DEFAULT 0 COMMENT '乐观锁版本',
+    del_flag                 TINYINT       NOT NULL DEFAULT 0 COMMENT '删除标志：0 未删 1 已删',
+    PRIMARY KEY (id),
+    KEY idx_finding_task_agent (task_id, agent_code),
+    KEY idx_finding_task_severity (task_id, severity)
+) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COMMENT '尽调风险线索（P9）';
+
+CREATE TABLE IF NOT EXISTS dd_supplement_request (
+    id                BIGINT        NOT NULL COMMENT '主键（雪花）',
+    task_id           BIGINT        NOT NULL COMMENT '任务ID',
+    plan_id           BIGINT        DEFAULT NULL COMMENT '计划ID',
+    execution_id      BIGINT        DEFAULT NULL COMMENT 'Agent 执行记录ID（dd_agent_execution.id）',
+    agent_code        VARCHAR(64)   DEFAULT NULL COMMENT '提出请求的 Agent 编码，手工创建可为空',
+    data_code         VARCHAR(64)   NOT NULL COMMENT '数据编码',
+    data_name         VARCHAR(256)  DEFAULT NULL COMMENT '数据名称',
+    reason            VARCHAR(1000) DEFAULT NULL COMMENT '请求原因',
+    suggested_action  VARCHAR(1000) DEFAULT NULL COMMENT '建议补充方式',
+    status            VARCHAR(32)   NOT NULL COMMENT '请求状态：PENDING / COMPLETED / CANCELLED',
+    source            VARCHAR(32)   NOT NULL COMMENT '来源：AGENT / MANUAL',
+    remark            VARCHAR(1000) DEFAULT NULL COMMENT '完成说明',
+    completed_at      DATETIME(3)   DEFAULT NULL COMMENT '完成时间',
+    creator           VARCHAR(64)   DEFAULT NULL COMMENT '创建人',
+    create_time       DATETIME(3)   NOT NULL DEFAULT CURRENT_TIMESTAMP(3) COMMENT '创建时间',
+    updater           VARCHAR(64)   DEFAULT NULL COMMENT '更新人',
+    update_time       DATETIME(3)   NOT NULL DEFAULT CURRENT_TIMESTAMP(3) ON UPDATE CURRENT_TIMESTAMP(3) COMMENT '更新时间',
+    version           INT           NOT NULL DEFAULT 0 COMMENT '乐观锁版本',
+    del_flag          TINYINT       NOT NULL DEFAULT 0 COMMENT '删除标志：0 未删 1 已删',
+    PRIMARY KEY (id),
+    KEY idx_supplement_task_status (task_id, status),
+    KEY idx_supplement_task_data (task_id, data_code)
+) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COMMENT '尽调补充材料请求（P9）';

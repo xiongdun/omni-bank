@@ -72,6 +72,16 @@ public class GraphExecutor {
      * @param resume 是否断点恢复：复用历史成功节点结果，其余节点重新执行
      */
     public GraphResult execute(GraphDefinition definition, Long taskId, Long planId, boolean resume) {
+        return execute(definition, taskId, planId, resume ? Set.of() : null);
+    }
+
+    /**
+     * 执行 Graph，支持按 Agent 局部重跑。
+     *
+     * @param rerunAgents null 表示全量执行；空集合表示全部复用历史成功节点（等价断点恢复）；
+     *                    非空表示仅这些 Agent 对应节点不复用，其余节点复用历史结果
+     */
+    public GraphResult execute(GraphDefinition definition, Long taskId, Long planId, Set<String> rerunAgents) {
         List<GraphNode> nodes = validate(definition);
         GraphResult graphResult = new GraphResult();
         graphResult.setGraphCode(definition.getGraphCode());
@@ -83,8 +93,7 @@ public class GraphExecutor {
             // 节点结果在框架执行过程中直接收集：Graph 返回的终态经过 StateSerializer 序列化克隆，
             // 自定义结果对象会被还原为 Map，无法按类型读取
             Map<String, GraphNodeResult> collected = new ConcurrentHashMap<>();
-            Map<String, GraphNodeResult> reusable = resume
-                    ? executionService.loadSucceeded(taskId, definition.getGraphCode()) : Map.of();
+            Map<String, GraphNodeResult> reusable = reusable(taskId, definition.getGraphCode(), rerunAgents);
             CompiledGraph compiledGraph = buildGraph(definition.getGraphCode(), nodes, taskId, planId,
                     reusable, collected);
             RunnableConfig runnableConfig = RunnableConfig.builder()
@@ -112,6 +121,24 @@ public class GraphExecutor {
                 definition.getGraphCode(), taskId, graphResult.getStatus(),
                 graphResult.getNodes().size(), graphResult.getDurationMs());
         return graphResult;
+    }
+
+    /** 计算可复用节点：全量执行无可复用；局部重跑时剔除待重跑 Agent 对应的历史结果 */
+    private Map<String, GraphNodeResult> reusable(Long taskId, String graphCode, Set<String> rerunAgents) {
+        if (rerunAgents == null) {
+            return Map.of();
+        }
+        Map<String, GraphNodeResult> succeeded = executionService.loadSucceeded(taskId, graphCode);
+        if (rerunAgents.isEmpty()) {
+            return succeeded;
+        }
+        Map<String, GraphNodeResult> reusable = new HashMap<>();
+        succeeded.forEach((nodeId, result) -> {
+            if (result.getAgentCode() == null || !rerunAgents.contains(result.getAgentCode())) {
+                reusable.put(nodeId, result);
+            }
+        });
+        return reusable;
     }
 
     private CompiledGraph buildGraph(String graphCode, List<GraphNode> nodes, Long taskId, Long planId,

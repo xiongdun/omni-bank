@@ -1,6 +1,6 @@
-# 银行对公信贷智能尽调 Agent（P0-P7 交付说明）
+# 银行对公信贷智能尽调 Agent（P0-P9 交付说明）
 
-本说明对应 REQUIREMENTS 第 12 条交付要求，覆盖当前已完成范围：**P0 工程骨架 + P1 模块一（尽调任务与企业上下文）+ P2 证据中心与 Mock 数据适配 + P3 Agent 框架底座（Tool Registry + Agent Runtime + Agent 01）+ P4 Prompt Manager、大模型调用、Planner 计划生成与 Graph 编排调度 + P5 专业 Agent（Agent 01–07）与节点执行记录持久化、断点恢复 + P6 专业 Agent（Agent 08–10）+ P7 综合风险评估（Agent 11）、尽调报告（Agent 12）与报告人工复核闭环（状态机、字段级修正留痕、复核接口）**。
+本说明对应 REQUIREMENTS 第 12 条交付要求，覆盖当前已完成范围：**P0 工程骨架 + P1 模块一（尽调任务与企业上下文）+ P2 证据中心与 Mock 数据适配 + P3 Agent 框架底座（Tool Registry + Agent Runtime + Agent 01）+ P4 Prompt Manager、大模型调用、Planner 计划生成与 Graph 编排调度 + P5 专业 Agent（Agent 01–07）与节点执行记录持久化、断点恢复 + P6 专业 Agent（Agent 08–10）+ P7 综合风险评估（Agent 11）、尽调报告（Agent 12）与报告人工复核闭环（状态机、字段级修正留痕、复核接口）+ P9 线索/补充材料落库、计划查询、证据关联溯源、状态闭环与增量重分析**。
 12 个专项 Agent 已全部交付（主体核验、财务分析、司法风险、征信债务、现场调查、材料识别、行业专家、贷款用途、反欺诈、政策匹配、综合风险评估、尽调报告），统一采用确定性规则引擎，不调用大模型；报告章节与版本已落库，人工复核全流程已接入，Word/PDF 导出尚未接入并在结果中显式标注。
 
 ## 1. 启动方式
@@ -31,7 +31,7 @@ mvn -ntp test -pl omni-bank-service/omni-bank-service-agent/omni-bank-service-ag
 
 ## 2. 接口文档
 
-服务内路径前缀 `/v1/dd/tasks`；经网关转发时对外为 `/api/agent/v1/dd/tasks/**`（网关已登记 `agent` 显式路由，`StripPrefix=1` 去前缀）。
+服务内路径前缀为 `/v1/dd`（任务类接口在 `/v1/dd/tasks`，计划与证据接口在 `/v1/dd/plans`、`/v1/dd/evidences`）；经网关转发时对外为 `/api/agent/v1/dd/**`（网关已登记 `agent` 显式路由，`StripPrefix=1` 去前缀）。
 统一响应体为项目 `Result<T>`；分页出参为 `PageResult<T>`。
 
 | 方法 | 路径 | 说明 |
@@ -48,12 +48,20 @@ mvn -ntp test -pl omni-bank-service/omni-bank-service-agent/omni-bank-service-ag
 | POST | `/v1/dd/tasks/{taskId}/scenario/reidentify` | 重新识别业务场景（生成新版本） |
 | GET | `/v1/dd/tasks/{taskId}/evidences` | 任务证据分页（evidenceType / sourceType / sourceSystem） |
 | GET | `/v1/dd/tasks/{taskId}/executions` | Agent 节点执行记录分页（executionStatus / nodeId） |
+| GET | `/v1/dd/tasks/{taskId}/findings` | 风险线索分页（agentCode / category / severity / status） |
+| GET | `/v1/dd/tasks/{taskId}/supplements` | 补充材料请求分页（agentCode / status / source） |
+| POST | `/v1/dd/tasks/{taskId}/supplements` | 手工创建补充材料请求（source=MANUAL） |
+| POST | `/v1/dd/tasks/{taskId}/supplements/{requestId}/complete` | 完成补充材料请求，触发受影响 Agent 增量重分析 |
+| GET | `/v1/dd/tasks/{taskId}/plans/current` | 任务当前尽调计划 |
+| GET | `/v1/dd/tasks/{taskId}/plans` | 任务计划版本分页（planVersion 倒序） |
+| GET | `/v1/dd/plans/{planId}` | 计划详情（六类计划输出） |
 | POST | `/v1/dd/tasks/{taskId}/resume` | 失败任务断点恢复：复用成功节点，重跑失败与跳过节点 |
 | GET | `/v1/dd/tasks/{taskId}/reports` | 报告版本分页（reportStatus） |
 | GET | `/v1/dd/tasks/{taskId}/reports/{reportVersion}` | 报告详情：状态、章节内容与引用证据 |
 | POST | `/v1/dd/tasks/{taskId}/reports/{reportVersion}/review` | 报告人工复核：提交/确认/补充说明/修正/驳回/要求补材料/要求重新分析/定稿 |
 | GET | `/v1/dd/tasks/{taskId}/reports/{reportVersion}/reviews` | 报告复核留痕 |
 | GET | `/v1/dd/evidences/{evidenceId}` | 证据详情与溯源字段 |
+| GET | `/v1/dd/evidences/{evidenceId}/references` | 证据关联溯源：引用该证据的线索、报告版本与复核留痕 |
 
 ### 创建任务示例
 
@@ -151,7 +159,7 @@ omni:
   - `OPENAI_COMPATIBLE`：渲染 `PLANNER` Prompt 后经 Spring AI `ChatClient` 生成结构化计划，Agent 编码、依赖闭包、无环与置信度校验失败返回 `230127`；不静默回退规则。
   - `MOCK`：按 Agent 目录规则生成，`planner_mode=MOCK`、`model_name=MOCK_RULE`，并在 `reasoning_summary` 标注规则生成与 Mock 证据数量。
 - `DdPlanGraphFactory` 按依赖计算拓扑层级，同层 Agent 并行，层后插入 `join.{level}` 汇聚节点，规避 Spring AI Alibaba Graph 的扇出汇聚约束。
-- `DdPlanScheduler` 在 `TASK_SUBMITTED` 消费链路内同步执行：`PLANNING → DATA_COLLECTING`，生成计划后执行 Graph，完成后推进到 `ANALYZING`；失败统一标记任务 `FAILED`。
+- `DdPlanScheduler` 在 `TASK_SUBMITTED` 消费链路内同步执行：`PLANNING → DATA_COLLECTING`，生成计划后执行 Graph，完成后推进到 `ANALYZING`，再按是否存在待补充材料推进到 `WAITING_FOR_SUPPLEMENT` 或 `RISK_ASSESSING → REPORT_GENERATING → WAITING_FOR_REVIEW`（P9）；失败统一标记任务 `FAILED`。
 
 ### 执行记录与断点恢复（P5）
 
@@ -229,11 +237,22 @@ P7 交付 Agent 11–12，仍为确定性规则引擎，`AgentResult.modelVersio
 - 边界：定稿仅表示尽调报告定稿，不代表信贷审批通过；Word/PDF 导出仍未接入，`exportInfo` 固定 `NOT_AVAILABLE`。
 - 导出边界：Word/PDF 导出未接入（不引入 POI/PDF 依赖），`exportInfo.wordStatus` / `pdfStatus` 固定 `NOT_AVAILABLE` 并说明原因，仅产出导出元信息。
 
+### 线索、补充材料与增量重分析（P9）
+
+- 线索落库：Agent 节点执行成功且返回结果时，`DdAgentExecutionServiceImpl` 在同一调用链路内把 `AgentResult.findings` 写入 `dd_finding`、`supplementRequests` 写入 `dd_supplement_request`。同一 `task_id + agent_code` 每次真正执行先逻辑删除旧线索再写入，保留当前有效结论；`finding_code` 缺失时按 `FND-{executionId}-{序号}` 生成。
+- 幂等：补充材料请求按 `task_id + data_code` 去重，已存在 `PENDING` 时跳过，重复投递事件不会重复生成。
+- 查询：`GET /tasks/{taskId}/findings` 支持 Agent、分类、严重级别与状态过滤；`GET /tasks/{taskId}/supplements` 支持 Agent、状态与来源（`AGENT` / `MANUAL`）过滤。
+- 手工补充：`POST /tasks/{taskId}/supplements` 创建 `source=MANUAL` 的待补充请求；`POST /tasks/{taskId}/supplements/{requestId}/complete` 仅允许 `PENDING` 完成，写入 `remark` 与 `completed_at`，请求不存在返回 `230135`，状态不符返回 `230136`，并发冲突返回 `230103`。
+- 状态推进：Graph 执行完成后，存在 `PENDING` 补充请求则停在 `WAITING_FOR_SUPPLEMENT`；否则依次 `RISK_ASSESSING → REPORT_GENERATING → WAITING_FOR_REVIEW`。报告复核联动仅在任务处于 `WAITING_FOR_REVIEW` 时生效：`FINALIZE → COMPLETED`，`REJECT` / `REQUEST_MATERIAL → RETURNED`。
+- 增量重分析：补充材料完成（任务处于 `WAITING_FOR_SUPPLEMENT` / `RETURNED`）或报告 `REANALYZE` 时发布 `DdReanalysisRequestedEvent`，由 `DdPlanScheduler` 计算「受影响 Agent + 传递依赖它的下游」闭包，任务进入 `REANALYZING` 后按当前计划重跑 Graph：闭包内节点重新执行，其余复用历史 `SUCCEEDED` 结果，完成后按上述规则重新推进状态并生成新的报告版本。影响集合为空时退化为全量重跑。
+- 计划查询：`PlanVO` 拆解 `agent_plan`、`data_plan`、`material_plan`、`dependency_plan`、`supplement_plan`、`execution_config`，其余元信息原样返回；任务无当前计划返回 `230137`。
+- 证据溯源：`GET /evidences/{evidenceId}/references` 返回引用该证据的线索、报告版本（按版本倒序）与复核留痕（按时间正序），匹配依据为 `evidenceRefs` / `evidence_ids` JSON 中的证据 ID。
+
 ### 任务状态
 
-`DRAFT(0) → INITIALIZING(10) → SCENARIO_IDENTIFYING(20) → PLANNING(30) → DATA_COLLECTING(40) → ANALYZING(60) → RISK_ASSESSING(80) → REPORT_GENERATING(90) → WAITING_FOR_REVIEW(95) → COMPLETED(100)`。
+`DRAFT(0) → INITIALIZING(10) → SCENARIO_IDENTIFYING(20) → PLANNING(30) → DATA_COLLECTING(40) → ANALYZING(60) → WAITING_FOR_SUPPLEMENT(60) 或 RISK_ASSESSING(80) → REPORT_GENERATING(90) → WAITING_FOR_REVIEW(95) → COMPLETED(100)`。
 
-P4 实际链路止于 `ANALYZING`（场景识别、基础证据采集、计划生成与 Graph 调度完成后进入分析阶段）；`WAITING_FOR_SUPPLEMENT(60)`、`REANALYZING(70)`、`RETURNED(80)`、`FAILED(0)`、`CANCELLED(0)` 为后续阶段预留。非法流转返回 `230102`，并发更新冲突返回 `230103`。
+分析完成后若存在待补充材料停在 `WAITING_FOR_SUPPLEMENT(60)`，补充完成后经 `REANALYZING(70)` 回到上述推进链路；复核退回进入 `RETURNED(80)`，再次重分析后重新生成报告。`FAILED(0)`、`CANCELLED(0)` 为异常与终止状态。非法流转返回 `230102`，并发更新冲突返回 `230103`。
 
 ### 错误码
 
@@ -272,6 +291,10 @@ P4 实际链路止于 `ANALYZING`（场景识别、基础证据采集、计划�
 | 230131 | 报告章节不存在 |
 | 230132 | 报告已被并发修改 |
 | 230133 | 复核参数不完整或非法 |
+| 230134 | 风险线索不存在 |
+| 230135 | 补充材料请求不存在 |
+| 230136 | 补充材料请求当前状态不允许该操作 |
+| 230137 | 尽调计划不存在 |
 
 ## 3. 数据库说明
 
@@ -289,6 +312,8 @@ DDL：`docs/sql/omni_bank_dd.sql`（MySQL 8，可重复执行）。
 | `dd_agent_execution` | Agent 节点执行记录（P5） | `uk_task_graph_node_no`；`idx_task_id`、`idx_task_status` |
 | `dd_due_diligence_report` | 尽调报告与版本（P7） | `uk_task_report_version`；`idx_task_id` |
 | `dd_report_review` | 报告人工复核留痕（P7） | `idx_review_task_version`；`idx_review_report_id` |
+| `dd_finding` | 风险线索（P9） | `idx_finding_task_agent`、`idx_finding_task_severity` |
+| `dd_supplement_request` | 补充材料请求（P9） | `idx_supplement_task_status`、`idx_supplement_task_data` |
 
 公共约定：雪花 `BIGINT` 主键；`version` 乐观锁；`del_flag` 逻辑删除；`creator/updater/create_time/update_time` 自动填充；时间 `DATETIME(3)`；JSON 列存业务扩展。
 
@@ -320,23 +345,24 @@ DdDocumentIndustryAgentIntegrationTest Tests run: 2, Failures: 0, Errors: 0, Ski
 DdLoanPurposeFraudPolicyAgentIntegrationTest Tests run: 3, Failures: 0, Errors: 0, Skipped: 0
 DdComprehensiveReportAgentIntegrationTest Tests run: 3, Failures: 0, Errors: 0, Skipped: 0
 DdReportReviewIntegrationTest        Tests run: 4, Failures: 0, Errors: 0, Skipped: 0
+DdFindingSupplementIntegrationTest   Tests run: 4, Failures: 0, Errors: 0, Skipped: 0
 TaskStateMachineTest                Tests run: 4, Failures: 0, Errors: 0, Skipped: 0
-合计                                 Tests run: 67, Failures: 0, Errors: 0, Skipped: 0
+合计                                 Tests run: 71, Failures: 0, Errors: 0, Skipped: 0
 mvn -pl ...-agent-boot -am test      BUILD SUCCESS
 ```
 
-覆盖：企业复用与申请快照、提交→Outbox→场景识别→证据采集→计划生成→Graph 调度→ANALYZING 全链路、事件重复投递幂等、规则未命中进入待确认、取消后不可提交、状态机合法/非法流转、详情与分页过滤、场景重新识别版本递增、SSE 端点状态快照推送；Mock 证据标记与来源、采集幂等、证据分页三类过滤、证据详情溯源字段、证据不存在（230115）与任务不存在（230101）；Agent 框架的工具发现/未知工具（230117）、统一社会信用代码三类校验、Mock 查询工具证据返回、主体核验 Agent 的结构化结果与待核实线索、未知 Agent（230118）；Prompt 版本发现与变量渲染、模板/变量缺失错误码（230120/230121）、Spring AI ChatClient Mock 标记与结构化输出（BeanOutputConverter）、OpenAI 兼容协议请求/响应映射（鉴权头、模型参数、500→230123、非法输出→230124、缺配置启动失败）、Spring AI Alibaba Graph 依赖分层执行与上游结果传递、未交付节点标记 `NOT_DELIVERED` 且下游跳过、循环依赖、空图与框架不支持的分支形态校验（230122）；Planner 规则计划生成与版本落库、`planner_mode=MOCK` 显式标记、计划转 Graph 后 12 个 Agent 全部 `SUCCEEDED` 且无 `NOT_DELIVERED` 节点、重复生成计划版本递增；以及 18 个 HTTP 端点的路径映射、查询参数绑定、`Result` 包装、参数校验错误码（000400）与业务错误码返回。执行记录相关覆盖：节点结果落库与分页过滤、重复执行序号递增、恢复复用成功节点且重跑失败节点、非失败任务恢复返回 230128、执行记录接口不返回结果全文。专业 Agent 相关覆盖：财务分析指标计算与纳税/流水勾稽、征信债务的逾期/担保/期限结构与上游财务复用、司法风险的涉诉/执行/处罚与主体模糊匹配降级、现场调查的 FACT/STATEMENT 区分与访谈偏差、材料识别的必备材料缺失/过期/重复/无法归类、行业专家的行业识别与基准对比、贷款用途的分类/需求测算/合同与资金流向线索/两类还款来源、反欺诈的规则编号与版本/人工核查结果占位/待核实线索、政策匹配的制度条款原文与页码版本/待人工确认项/适用性边界；各 Agent 均校验 Mock 告警、证据登记与数据缺口输出。综合风险与报告相关覆盖：缺上游时 `assessable=false` 与原因逐条列出、`riskLevel=NOT_RATED`、9 个维度、10 个缺失上游、还款来源标注“无法评估”、不输出最终审批金额与不代替审批人决策告警；18 章模板、`AI_GENERATED` / `NOT_SUBMITTED`、`draftComplete=false`、校验问题清单、导出 `NOT_AVAILABLE`、报告版本递增且历史不被覆盖、`content_json` 落库。报告复核相关覆盖：提交→确认→定稿流转与留痕顺序、定稿后拒绝复核（230130）、修正章节保留原始值与修正值并写回 `content_json`、驳回缺少原因（230133）、退回后不可确认、要求重新分析、报告分页/详情/复核接口与报告不存在（230129）。
+覆盖：企业复用与申请快照、提交→Outbox→场景识别→证据采集→计划生成→Graph 调度→ANALYZING 全链路、事件重复投递幂等、规则未命中进入待确认、取消后不可提交、状态机合法/非法流转、详情与分页过滤、场景重新识别版本递增、SSE 端点状态快照推送；Mock 证据标记与来源、采集幂等、证据分页三类过滤、证据详情溯源字段、证据不存在（230115）与任务不存在（230101）；Agent 框架的工具发现/未知工具（230117）、统一社会信用代码三类校验、Mock 查询工具证据返回、主体核验 Agent 的结构化结果与待核实线索、未知 Agent（230118）；Prompt 版本发现与变量渲染、模板/变量缺失错误码（230120/230121）、Spring AI ChatClient Mock 标记与结构化输出（BeanOutputConverter）、OpenAI 兼容协议请求/响应映射（鉴权头、模型参数、500→230123、非法输出→230124、缺配置启动失败）、Spring AI Alibaba Graph 依赖分层执行与上游结果传递、未交付节点标记 `NOT_DELIVERED` 且下游跳过、循环依赖、空图与框架不支持的分支形态校验（230122）；Planner 规则计划生成与版本落库、`planner_mode=MOCK` 显式标记、计划转 Graph 后 12 个 Agent 全部 `SUCCEEDED` 且无 `NOT_DELIVERED` 节点、重复生成计划版本递增；以及 HTTP 端点的路径映射、查询参数绑定、`Result` 包装、参数校验错误码（000400）与业务错误码返回。执行记录相关覆盖：节点结果落库与分页过滤、重复执行序号递增、恢复复用成功节点且重跑失败节点、非失败任务恢复返回 230128、执行记录接口不返回结果全文。专业 Agent 相关覆盖：财务分析指标计算与纳税/流水勾稽、征信债务的逾期/担保/期限结构与上游财务复用、司法风险的涉诉/执行/处罚与主体模糊匹配降级、现场调查的 FACT/STATEMENT 区分与访谈偏差、材料识别的必备材料缺失/过期/重复/无法归类、行业专家的行业识别与基准对比、贷款用途的分类/需求测算/合同与资金流向线索/两类还款来源、反欺诈的规则编号与版本/人工核查结果占位/待核实线索、政策匹配的制度条款原文与页码版本/待人工确认项/适用性边界；各 Agent 均校验 Mock 告警、证据登记与数据缺口输出。综合风险与报告相关覆盖：缺上游时 `assessable=false` 与原因逐条列出、`riskLevel=NOT_RATED`、9 个维度、10 个缺失上游、还款来源标注“无法评估”、不输出最终审批金额与不代替审批人决策告警；18 章模板、`AI_GENERATED` / `NOT_SUBMITTED`、`draftComplete=false`、校验问题清单、导出 `NOT_AVAILABLE`、报告版本递增且历史不被覆盖、`content_json` 落库。报告复核相关覆盖：提交→确认→定稿流转与留痕顺序、定稿后拒绝复核（230130）、修正章节保留原始值与修正值并写回 `content_json`、驳回缺少原因（230133）、退回后不可确认、要求重新分析、报告分页/详情/复核接口与报告不存在（230129）。P9 相关覆盖：Agent 结果落库为可检索线索与待补充请求、重复投递不重复生成待补充请求、完成补充请求触发增量重分析并生成新的报告版本、计划查询与证据关联溯源接口返回 `Result` 包装。
 
 > 加固说明：测试发现 `omni-bank-common-mybatis` 的 `MybatisPlusConfig`（分页插件）与 `AuditMetaObjectHandler`（审计填充）未登记自动装配，导致分页 `total` 恒为 0、`creator/updater` 不填充。已新增 `META-INF/spring/org.springframework.boot.autoconfigure.AutoConfiguration.imports` 修复，全仓模块统一生效。
 
 ## 6. 未完成事项与待确认
 
-1. **报告导出未接入**：`dd_due_diligence_report` 已持久化章节与版本，`dd_report_review` 已支持复核留痕与字段级修正；Word/PDF 导出（固定 `NOT_AVAILABLE`，未引入 POI/PDF 依赖）待后续阶段；`REANALYZING` 状态目前只标记状态，不会自动触发新版本重新生成。
-2. **P7 之后链路未实现**：真实异步任务队列、增量分析（仅支持失败恢复，不支持按数据版本增量重跑）、正式风险评级标准（当前 `riskLevel` 固定 `NOT_RATED`）、Finding / 补充资料落库、任务状态推进至 `RISK_ASSESSING` / `REPORT_GENERATING` / `WAITING_FOR_REVIEW` / `COMPLETED`。
+1. **报告导出未接入**：`dd_due_diligence_report` 已持久化章节与版本，`dd_report_review` 已支持复核留痕与字段级修正；Word/PDF 导出（固定 `NOT_AVAILABLE`，未引入 POI/PDF 依赖）待后续阶段。
+2. **增量分析粒度有限**：当前按 Agent 依赖闭包重跑，不区分单条数据版本；`RISK_ASSESSING` / `REPORT_GENERATING` / `WAITING_FOR_REVIEW` 为确定性状态推进，未接入独立的风险评估与报告生成任务；真实异步任务队列未接入；正式风险评级标准缺失（当前 `riskLevel` 固定 `NOT_RATED`）。
 3. **Agent 01–12 尚未接入大模型**：当前均为确定性规则引擎；Prompt 模板与 Spring AI `ChatClient` 已就绪，切换需在 Agent 内组装 Prompt、校验输出并记录 `modelVersion` / `promptVersion`。
 4. **模型网关联调未完成**：`OPENAI_COMPATIBLE` 模式仅完成协议适配与本地模拟网关测试，真实网关地址、模型名称与配额待确认。
 5. **真实银行/外部数据接口未对接**：当前仅 `MockBankDataAdapter`，切换真实接口需新增 `ExternalDataAdapter` 实现并关闭 `omni.dd.adapter.mock.enabled`。
-6. **证据关联查询未实现**：`/v1/dd/evidences/{evidenceId}/references` 依赖 P3 的 Agent 结果、Finding、报告章节与人工复核表。
+6. **证据关联查询基于 JSON 匹配**：`/v1/dd/evidences/{evidenceId}/references` 通过 `evidenceRefs` / `evidence_ids` JSON 中的证据 ID 匹配，未建独立关联表；证据量级上升后建议改造为关联表。
 7. **场景识别规则待业务确认**：当前按产品编码 + 贷款用途关键词配置在 `omni.dd.scenario.rules`，置信度阈值 0.60；场景识别的模型化改造未实施，P4 Planner 仅以规则识别结果为输入，规则口径与阈值需银行业务部门确认。
 8. **鉴权未在 dd 端点启用**：当前依赖网关与 `UserContextFilter` 透传 `X-User-*`，内网直连 8109 时无鉴权。
 9. **网关路由已登记但鉴权未打通**：`/api/agent/**` 显式路由已就位，但 system 域路由仍未登记，管理端完整链路需待 system 路由与 Sa-Token 鉴权贯通。

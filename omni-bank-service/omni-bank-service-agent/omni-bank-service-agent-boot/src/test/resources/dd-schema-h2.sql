@@ -243,3 +243,50 @@ CREATE TABLE IF NOT EXISTS dd_report_review (
     update_time      TIMESTAMP,
     del_flag         TINYINT       DEFAULT 0
 );
+
+CREATE TABLE IF NOT EXISTS dd_finding (
+    id                      BIGINT        NOT NULL PRIMARY KEY,
+    task_id                 BIGINT        NOT NULL,
+    plan_id                 BIGINT,
+    execution_id            BIGINT,
+    agent_code              VARCHAR(64),
+    node_id                 VARCHAR(128),
+    finding_code            VARCHAR(64)   NOT NULL,
+    category                VARCHAR(64),
+    severity                VARCHAR(32),
+    title                   VARCHAR(256),
+    description             VARCHAR(4000),
+    confidence              DECIMAL(5, 4),
+    status                  VARCHAR(32)   NOT NULL,
+    evidence_refs           VARCHAR(16000),
+    related_finding_codes   VARCHAR(4000),
+    verification_suggestion VARCHAR(1000),
+    creator                 VARCHAR(64),
+    create_time             TIMESTAMP,
+    updater                 VARCHAR(64),
+    update_time             TIMESTAMP,
+    version                 INT           DEFAULT 0,
+    del_flag                TINYINT       DEFAULT 0
+);
+
+CREATE TABLE IF NOT EXISTS dd_supplement_request (
+    id               BIGINT        NOT NULL PRIMARY KEY,
+    task_id          BIGINT        NOT NULL,
+    plan_id          BIGINT,
+    execution_id     BIGINT,
+    agent_code       VARCHAR(64),
+    data_code        VARCHAR(64)   NOT NULL,
+    data_name        VARCHAR(256),
+    reason           VARCHAR(1000),
+    suggested_action VARCHAR(1000),
+    status           VARCHAR(32)   NOT NULL,
+    source           VARCHAR(32)   NOT NULL,
+    remark           VARCHAR(1000),
+    completed_at     TIMESTAMP,
+    creator          VARCHAR(64),
+    create_time      TIMESTAMP,
+    updater          VARCHAR(64),
+    update_time      TIMESTAMP,
+    version          INT           DEFAULT 0,
+    del_flag         TINYINT       DEFAULT 0
+);

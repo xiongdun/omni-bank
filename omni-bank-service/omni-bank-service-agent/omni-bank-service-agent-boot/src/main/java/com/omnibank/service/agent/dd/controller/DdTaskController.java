@@ -8,7 +8,13 @@ import com.omnibank.service.agent.dd.dto.evidence.EvidenceListVO;
 import com.omnibank.service.agent.dd.dto.evidence.EvidenceQueryReq;
 import com.omnibank.service.agent.dd.dto.execution.AgentExecutionQueryReq;
 import com.omnibank.service.agent.dd.dto.execution.AgentExecutionVO;
+import com.omnibank.service.agent.dd.dto.finding.FindingListVO;
+import com.omnibank.service.agent.dd.dto.finding.FindingQueryReq;
 import com.omnibank.service.agent.dd.dto.scenario.ScenarioVO;
+import com.omnibank.service.agent.dd.dto.supplement.CompleteSupplementReq;
+import com.omnibank.service.agent.dd.dto.supplement.CreateSupplementReq;
+import com.omnibank.service.agent.dd.dto.supplement.SupplementQueryReq;
+import com.omnibank.service.agent.dd.dto.supplement.SupplementRequestVO;
 import com.omnibank.service.agent.dd.dto.task.CreateTaskReq;
 import com.omnibank.service.agent.dd.dto.task.TaskContextVO;
 import com.omnibank.service.agent.dd.dto.task.TaskCreateVO;
@@ -19,7 +25,9 @@ import com.omnibank.service.agent.dd.dto.task.TaskStatusVO;
 import com.omnibank.service.agent.dd.plan.DdPlanScheduler;
 import com.omnibank.service.agent.dd.service.DdAgentExecutionService;
 import com.omnibank.service.agent.dd.service.DdEvidenceService;
+import com.omnibank.service.agent.dd.service.DdFindingService;
 import com.omnibank.service.agent.dd.service.DdScenarioService;
+import com.omnibank.service.agent.dd.service.DdSupplementRequestService;
 import com.omnibank.service.agent.dd.service.DdTaskService;
 import jakarta.validation.Valid;
 import java.io.IOException;
@@ -54,6 +62,10 @@ public class DdTaskController {
     private final DdPlanScheduler planScheduler;
 
     private final DdAgentExecutionService executionService;
+
+    private final DdFindingService findingService;
+
+    private final DdSupplementRequestService supplementRequestService;
 
     /** 创建尽调任务（草稿） */
     @PostMapping
@@ -141,5 +153,33 @@ public class DdTaskController {
     public Result<PageResult<AgentExecutionVO>> executions(@PathVariable Long taskId,
                                                            AgentExecutionQueryReq req) {
         return Result.success(PageResults.from(executionService.page(taskId, req)));
+    }
+
+    /** 风险线索分页 */
+    @GetMapping("/{taskId}/findings")
+    public Result<PageResult<FindingListVO>> findings(@PathVariable Long taskId, FindingQueryReq req) {
+        return Result.success(PageResults.from(findingService.page(taskId, req)));
+    }
+
+    /** 补充材料请求分页 */
+    @GetMapping("/{taskId}/supplements")
+    public Result<PageResult<SupplementRequestVO>> supplements(@PathVariable Long taskId,
+                                                               SupplementQueryReq req) {
+        return Result.success(PageResults.from(supplementRequestService.page(taskId, req)));
+    }
+
+    /** 手工创建补充材料请求 */
+    @PostMapping("/{taskId}/supplements")
+    public Result<SupplementRequestVO> createSupplement(@PathVariable Long taskId,
+                                                        @Valid @RequestBody CreateSupplementReq req) {
+        return Result.success(supplementRequestService.create(taskId, req));
+    }
+
+    /** 完成补充材料请求，完成后触发受影响 Agent 增量重分析 */
+    @PostMapping("/{taskId}/supplements/{requestId}/complete")
+    public Result<SupplementRequestVO> completeSupplement(@PathVariable Long taskId,
+                                                          @PathVariable Long requestId,
+                                                          @Valid @RequestBody CompleteSupplementReq req) {
+        return Result.success(supplementRequestService.complete(taskId, requestId, req));
     }
 }

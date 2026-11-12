@@ -2,6 +2,7 @@ package com.omnibank.service.agent.dd.controller;
 
 import com.omnibank.common.core.result.Result;
 import com.omnibank.service.agent.dd.dto.evidence.EvidenceDetailVO;
+import com.omnibank.service.agent.dd.dto.evidence.EvidenceReferenceVO;
 import com.omnibank.service.agent.dd.service.DdEvidenceService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -23,5 +24,11 @@ public class DdEvidenceController {
     @GetMapping("/{evidenceId}")
     public Result<EvidenceDetailVO> detail(@PathVariable Long evidenceId) {
         return Result.success(evidenceService.detail(evidenceId));
+    }
+
+    /** 证据溯源：引用该证据的线索、报告版本与复核留痕 */
+    @GetMapping("/{evidenceId}/references")
+    public Result<EvidenceReferenceVO> references(@PathVariable Long evidenceId) {
+        return Result.success(evidenceService.references(evidenceId));
     }
 }

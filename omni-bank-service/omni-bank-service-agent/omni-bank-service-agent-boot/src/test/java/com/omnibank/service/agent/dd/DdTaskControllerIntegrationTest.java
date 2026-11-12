@@ -106,8 +106,8 @@ class DdTaskControllerIntegrationTest {
         mockMvc.perform(get("/v1/dd/tasks/{taskId}/status", taskId))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.code").value(SUCCESS))
-                .andExpect(jsonPath("$.data.taskStatus").value("ANALYZING"))
-                .andExpect(jsonPath("$.data.progress").value(60));
+                .andExpect(jsonPath("$.data.taskStatus").value("WAITING_FOR_REVIEW"))
+                .andExpect(jsonPath("$.data.progress").value(95));
 
         mockMvc.perform(get("/v1/dd/tasks/{taskId}/scenario", taskId))
                 .andExpect(status().isOk())

@@ -13,6 +13,8 @@ import com.omnibank.service.agent.dd.graph.GraphNodeResult;
 import com.omnibank.service.agent.dd.graph.GraphNodeStatus;
 import com.omnibank.service.agent.dd.mapper.DdAgentExecutionMapper;
 import com.omnibank.service.agent.dd.service.DdAgentExecutionService;
+import com.omnibank.service.agent.dd.service.DdFindingService;
+import com.omnibank.service.agent.dd.service.DdSupplementRequestService;
 import com.omnibank.service.agent.dd.service.DdTaskService;
 import com.omnibank.service.agent.dd.support.DdJsonSupport;
 import java.util.LinkedHashMap;
@@ -44,6 +46,10 @@ public class DdAgentExecutionServiceImpl
 
     private final DdTaskService taskService;
 
+    private final DdFindingService findingService;
+
+    private final DdSupplementRequestService supplementRequestService;
+
     @Override
     public void record(Long taskId, Long planId, String graphCode, GraphNode node,
                        GraphNodeResult nodeResult) {
@@ -72,6 +78,13 @@ public class DdAgentExecutionServiceImpl
         entity.setDurationMs(nodeResult.getDurationMs());
         entity.setVersion(0);
         save(entity);
+        if (nodeResult.getStatus() == GraphNodeStatus.SUCCEEDED && result != null) {
+            // 线索与补充材料请求是 Agent 结果的可检索投影，随执行记录一并落库
+            findingService.replaceByAgent(taskId, planId, entity.getId(), node.agentCode(), node.nodeId(),
+                    result.getFindings());
+            supplementRequestService.recordFromExecution(taskId, planId, entity.getId(), node.agentCode(),
+                    result.getSupplementRequests());
+        }
     }
 
     @Override

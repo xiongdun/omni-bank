@@ -176,7 +176,8 @@ class DdExecutionPersistenceIntegrationTest {
                 .satisfies(exception -> assertThat(((BizException) exception).getCode()).isEqualTo("230128"));
 
         long analyzingTaskId = submittedTask("APPEXEC" + System.nanoTime());
-        assertThat(taskService.status(analyzingTaskId).getTaskStatus()).isEqualTo(TaskStatus.ANALYZING.name());
+        assertThat(taskService.status(analyzingTaskId).getTaskStatus())
+                .isIn(TaskStatus.WAITING_FOR_SUPPLEMENT.name(), TaskStatus.WAITING_FOR_REVIEW.name());
         assertThatThrownBy(() -> planScheduler.resume(analyzingTaskId))
                 .isInstanceOf(BizException.class)
                 .satisfies(exception -> assertThat(((BizException) exception).getCode()).isEqualTo("230128"));

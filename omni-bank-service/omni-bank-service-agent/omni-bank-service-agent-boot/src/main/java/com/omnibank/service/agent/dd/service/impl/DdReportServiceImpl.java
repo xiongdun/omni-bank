@@ -14,6 +14,8 @@ import com.omnibank.service.agent.dd.entity.DdReportReview;
 import com.omnibank.service.agent.dd.enums.ReportReviewAction;
 import com.omnibank.service.agent.dd.enums.ReportReviewStatus;
 import com.omnibank.service.agent.dd.enums.ReportStatus;
+import com.omnibank.service.agent.dd.enums.TaskStatus;
+import com.omnibank.service.agent.dd.event.DdReanalysisRequestedEvent;
 import com.omnibank.service.agent.dd.mapper.DdDueDiligenceReportMapper;
 import com.omnibank.service.agent.dd.mapper.DdReportReviewMapper;
 import com.omnibank.service.agent.dd.service.DdReportService;
@@ -22,7 +24,9 @@ import com.omnibank.service.agent.dd.support.DdJsonSupport;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import lombok.RequiredArgsConstructor;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
@@ -41,6 +45,8 @@ public class DdReportServiceImpl
     private final DdReportReviewMapper reviewMapper;
 
     private final DdTaskService taskService;
+
+    private final ApplicationEventPublisher eventPublisher;
 
     @Override
     public DdDueDiligenceReport createVersion(Long taskId, String title, String reportStatus,
@@ -168,7 +174,24 @@ public class DdReportServiceImpl
         if (amendedContentJson != null) {
             report.setContentJson(amendedContentJson);
         }
+        linkTaskStatus(taskId, action);
         return report;
+    }
+
+    /** 报告复核联动任务状态：定稿完成、驳回/补材料退回、要求重新分析；任务不在对应状态时不强耦合 */
+    private void linkTaskStatus(Long taskId, ReportReviewAction action) {
+        switch (action) {
+            case FINALIZE -> taskService.markCompletedIfWaitingForReview(taskId);
+            case REJECT, REQUEST_MATERIAL -> taskService.markReturnedIfWaitingForReview(taskId);
+            case REANALYZE -> {
+                if (TaskStatus.RETURNED.name().equals(taskService.requireTask(taskId).getTaskStatus())) {
+                    eventPublisher.publishEvent(
+                            new DdReanalysisRequestedEvent(taskId, Set.of(), "报告要求重新分析"));
+                }
+            }
+            default -> {
+            }
+        }
     }
 
     @Override
@@ -177,6 +200,24 @@ public class DdReportServiceImpl
         return reviewMapper.selectList(Wrappers.<DdReportReview>lambdaQuery()
                 .eq(DdReportReview::getTaskId, taskId)
                 .eq(DdReportReview::getReportVersion, reportVersion)
+                .orderByAsc(DdReportReview::getCreateTime)
+                .orderByAsc(DdReportReview::getId));
+    }
+
+    @Override
+    public List<DdDueDiligenceReport> listByEvidence(Long taskId, Long evidenceId) {
+        return lambdaQuery()
+                .eq(DdDueDiligenceReport::getTaskId, taskId)
+                .like(DdDueDiligenceReport::getEvidenceIds, "\"" + evidenceId + "\"")
+                .orderByDesc(DdDueDiligenceReport::getReportVersion)
+                .list();
+    }
+
+    @Override
+    public List<DdReportReview> listReviewsByEvidence(Long taskId, Long evidenceId) {
+        return reviewMapper.selectList(Wrappers.<DdReportReview>lambdaQuery()
+                .eq(DdReportReview::getTaskId, taskId)
+                .like(DdReportReview::getEvidenceIds, "\"" + evidenceId + "\"")
                 .orderByAsc(DdReportReview::getCreateTime)
                 .orderByAsc(DdReportReview::getId));
     }
