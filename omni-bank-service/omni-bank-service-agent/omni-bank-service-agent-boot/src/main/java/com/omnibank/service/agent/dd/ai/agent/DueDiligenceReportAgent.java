@@ -11,6 +11,8 @@ import com.omnibank.service.agent.dd.ai.EvidenceRef;
 import com.omnibank.service.agent.dd.dto.application.LoanApplicationVO;
 import com.omnibank.service.agent.dd.dto.enterprise.EnterpriseVO;
 import com.omnibank.service.agent.dd.enums.EvidenceType;
+import com.omnibank.service.agent.dd.enums.ReportReviewStatus;
+import com.omnibank.service.agent.dd.enums.ReportStatus;
 import com.omnibank.service.agent.dd.plan.DdAgentCatalog;
 import com.omnibank.service.agent.dd.support.DdJsonSupport;
 import com.omnibank.service.agent.dd.tool.ToolRegistry;
@@ -45,8 +47,6 @@ public class DueDiligenceReportAgent implements CreditAgent<Void, DueDiligenceRe
 
     public static final String EXPORT_NOTE =
             "P7 仅生成结构化报告数据，Word/PDF 渲染能力未接入，导出能力在后续阶段实现";
-
-    public static final String REVIEW_STATUS_PENDING = "PENDING_MANUAL_REVIEW";
 
     private static final String TOOL_TEMPLATE = "report.getTemplate";
 
@@ -137,7 +137,6 @@ public class DueDiligenceReportAgent implements CreditAgent<Void, DueDiligenceRe
         }
 
         ReportSnapshots.ValidationResult validation = validate(context, chapterMaps, warnings);
-        String reportStatus = validation.valid() ? "AI_DRAFT_COMPLETE" : "AI_DRAFT_INCOMPLETE";
 
         Set<String> evidenceIds = new LinkedHashSet<>();
         chapters.forEach(chapter -> evidenceIds.addAll(chapter.getEvidenceIds()));
@@ -147,8 +146,9 @@ public class DueDiligenceReportAgent implements CreditAgent<Void, DueDiligenceRe
 
         DueDiligenceReportData data = new DueDiligenceReportData();
         data.setTaskId(context.getTaskId());
-        data.setReportStatus(reportStatus);
-        data.setReviewStatus(REVIEW_STATUS_PENDING);
+        data.setReportStatus(ReportStatus.AI_GENERATED.name());
+        data.setReviewStatus(ReportReviewStatus.NOT_SUBMITTED.name());
+        data.setDraftComplete(validation.valid());
         data.setTitle(reportTitle(context));
         data.setTemplateVersion(template.templateVersion());
         data.setChapters(chapters);

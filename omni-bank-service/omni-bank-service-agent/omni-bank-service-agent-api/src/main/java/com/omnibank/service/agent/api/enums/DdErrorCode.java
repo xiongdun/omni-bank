@@ -38,7 +38,12 @@ public enum DdErrorCode implements ErrorCode {
     GRAPH_EXECUTION_FAILED("230125", "Graph 执行失败"),
     PLANNER_GENERATE_FAILED("230126", "尽调计划生成失败"),
     PLAN_INVALID("230127", "尽调计划校验未通过"),
-    TASK_NOT_RESUMABLE("230128", "任务当前状态不可恢复执行");
+    TASK_NOT_RESUMABLE("230128", "任务当前状态不可恢复执行"),
+    REPORT_NOT_FOUND("230129", "尽调报告不存在"),
+    REPORT_STATUS_NOT_ALLOWED("230130", "报告当前状态不允许该复核操作"),
+    REPORT_CHAPTER_NOT_FOUND("230131", "报告章节不存在"),
+    REPORT_CONFLICT("230132", "报告已被并发修改，请刷新后重试"),
+    REPORT_REVIEW_PARAM_INVALID("230133", "复核参数不完整或非法");
 
     private final String code;
 

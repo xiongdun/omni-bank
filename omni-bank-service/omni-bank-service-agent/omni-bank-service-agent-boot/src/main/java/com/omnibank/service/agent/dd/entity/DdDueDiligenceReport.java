@@ -23,10 +23,10 @@ public class DdDueDiligenceReport extends BaseEntity {
     /** 报告版本，同一任务递增 */
     private Integer reportVersion;
 
-    /** 报告状态：AI_DRAFT_COMPLETE / AI_DRAFT_INCOMPLETE */
+    /** 报告状态：DRAFT / AI_GENERATED / WAITING_FOR_REVIEW / RETURNED_FOR_SUPPLEMENT / REANALYZING / REVIEWED / FINALIZED */
     private String reportStatus;
 
-    /** 复核状态：PENDING_MANUAL_REVIEW / REVIEWED */
+    /** 复核状态：NOT_SUBMITTED / PENDING_MANUAL_REVIEW / RETURNED_FOR_SUPPLEMENT / REANALYZING / REVIEWED / FINALIZED */
     private String reviewStatus;
 
     /** 报告标题 */

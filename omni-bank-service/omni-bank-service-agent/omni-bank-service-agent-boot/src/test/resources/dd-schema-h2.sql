@@ -221,3 +221,25 @@ CREATE TABLE IF NOT EXISTS dd_due_diligence_report (
     del_flag         TINYINT       DEFAULT 0,
     CONSTRAINT uk_dd_due_diligence_report UNIQUE (task_id, report_version)
 );
+
+CREATE TABLE IF NOT EXISTS dd_report_review (
+    id               BIGINT        NOT NULL PRIMARY KEY,
+    task_id          BIGINT        NOT NULL,
+    report_id        BIGINT        NOT NULL,
+    report_version   INT           NOT NULL,
+    action_type      VARCHAR(32)   NOT NULL,
+    from_status      VARCHAR(32)   NOT NULL,
+    to_status        VARCHAR(32)   NOT NULL,
+    field_key        VARCHAR(64),
+    original_value   VARCHAR(64000),
+    amended_value    VARCHAR(64000),
+    reviewer         VARCHAR(64)   NOT NULL,
+    reason           VARCHAR(500),
+    remark           VARCHAR(1000),
+    evidence_ids     VARCHAR(16000),
+    creator          VARCHAR(64),
+    create_time      TIMESTAMP,
+    updater          VARCHAR(64),
+    update_time      TIMESTAMP,
+    del_flag         TINYINT       DEFAULT 0
+);

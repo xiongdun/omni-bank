@@ -23,11 +23,14 @@ public class DueDiligenceReportData {
     /** 报告版本，同一任务递增 */
     private Integer reportVersion;
 
-    /** 报告状态：AI_DRAFT_COMPLETE / AI_DRAFT_INCOMPLETE */
+    /** 报告状态：生成后固定 AI_GENERATED，后续由人工复核流转 */
     private String reportStatus;
 
-    /** 复核状态固定 PENDING_MANUAL_REVIEW */
+    /** 复核状态：生成后固定 NOT_SUBMITTED */
     private String reviewStatus;
+
+    /** 草稿是否完整：必备章节均可用且有内容、有证据 */
+    private boolean draftComplete;
 
     /** 报告标题 */
     private String title;

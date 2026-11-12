@@ -1,10 +1,14 @@
 package com.omnibank.service.agent.dd.service;
 
+import com.baomidou.mybatisplus.core.metadata.IPage;
+import com.omnibank.service.agent.dd.dto.report.ReportQueryReq;
+import com.omnibank.service.agent.dd.dto.report.ReportReviewReq;
 import com.omnibank.service.agent.dd.entity.DdDueDiligenceReport;
+import com.omnibank.service.agent.dd.entity.DdReportReview;
 import java.util.List;
 
 /**
- * 尽调报告版本服务：按任务生成递增版本并持久化章节内容
+ * 尽调报告服务：版本生成、查询与人工复核状态流转
  */
 public interface DdReportService {
 
@@ -18,4 +22,16 @@ public interface DdReportService {
 
     /** 任务最新报告版本，不存在返回 null */
     DdDueDiligenceReport latest(Long taskId);
+
+    /** 任务报告版本分页 */
+    IPage<DdDueDiligenceReport> page(Long taskId, ReportQueryReq req);
+
+    /** 查询指定版本报告，不存在抛业务异常 */
+    DdDueDiligenceReport requireReport(Long taskId, Integer reportVersion);
+
+    /** 执行复核动作：校验流转、修正章节内容并写入留痕记录 */
+    DdDueDiligenceReport review(Long taskId, Integer reportVersion, ReportReviewReq req, String reviewer);
+
+    /** 查询指定版本报告的复核留痕，按时间正序 */
+    List<DdReportReview> reviews(Long taskId, Integer reportVersion);
 }

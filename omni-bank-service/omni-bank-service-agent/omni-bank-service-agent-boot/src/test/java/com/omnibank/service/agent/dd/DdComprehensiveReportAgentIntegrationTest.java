@@ -79,8 +79,9 @@ class DdComprehensiveReportAgentIntegrationTest {
         DueDiligenceReportData data = result.getData();
         assertThat(data).isNotNull();
         assertThat(data.getChapters()).hasSize(18);
-        assertThat(data.getReportStatus()).isEqualTo("AI_DRAFT_INCOMPLETE");
-        assertThat(data.getReviewStatus()).isEqualTo("PENDING_MANUAL_REVIEW");
+        assertThat(data.getReportStatus()).isEqualTo("AI_GENERATED");
+        assertThat(data.getReviewStatus()).isEqualTo("NOT_SUBMITTED");
+        assertThat(data.isDraftComplete()).isFalse();
         assertThat(data.getReportVersion()).isNotNull();
         assertThat(data.getCompleteness()).isLessThan(new BigDecimal("0.50"));
         assertThat(data.getMissingInputs()).isNotEmpty();

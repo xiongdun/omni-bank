@@ -1,7 +1,7 @@
 -- ============================================================
 -- 对公信贷智能尽调域（dd_*）建表脚本
 -- 所属服务：omni-bank-service-agent（端口 8109）
--- 说明：模块一（尽调任务与企业上下文）、P2 证据中心、P4 尽调计划、P5 节点执行记录与 P7 报告版本所需表集，可重复执行
+-- 说明：模块一（尽调任务与企业上下文）、P2 证据中心、P4 尽调计划、P5 节点执行记录、P7 报告版本与人工复核留痕所需表集，可重复执行
 -- ============================================================
 
 CREATE TABLE IF NOT EXISTS dd_task (
@@ -260,8 +260,8 @@ CREATE TABLE IF NOT EXISTS dd_due_diligence_report (
     task_id          BIGINT        NOT NULL COMMENT '任务ID',
     report_no        VARCHAR(64)   NOT NULL COMMENT '报告编号',
     report_version   INT           NOT NULL DEFAULT 1 COMMENT '报告版本，同一任务递增',
-    report_status    VARCHAR(32)   NOT NULL COMMENT '报告状态：AI_DRAFT_COMPLETE / AI_DRAFT_INCOMPLETE',
-    review_status    VARCHAR(32)   NOT NULL COMMENT '复核状态：PENDING_MANUAL_REVIEW / REVIEWED',
+    report_status    VARCHAR(32)   NOT NULL COMMENT '报告状态：DRAFT / AI_GENERATED / WAITING_FOR_REVIEW / RETURNED_FOR_SUPPLEMENT / REANALYZING / REVIEWED / FINALIZED',
+    review_status    VARCHAR(32)   NOT NULL COMMENT '复核状态：NOT_SUBMITTED / PENDING_MANUAL_REVIEW / RETURNED_FOR_SUPPLEMENT / REANALYZING / REVIEWED / FINALIZED',
     title            VARCHAR(256)  DEFAULT NULL COMMENT '报告标题',
     content_json     JSON          DEFAULT NULL COMMENT '报告章节内容（结构化 JSON）',
     evidence_ids     JSON          DEFAULT NULL COMMENT '报告引用的证据ID集合',
@@ -282,3 +282,28 @@ CREATE TABLE IF NOT EXISTS dd_due_diligence_report (
     UNIQUE KEY uk_task_report_version (task_id, report_version),
     KEY idx_report_task_id (task_id)
 ) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COMMENT '尽调报告版本（P7）';
+
+CREATE TABLE IF NOT EXISTS dd_report_review (
+    id               BIGINT        NOT NULL COMMENT '主键（雪花）',
+    task_id          BIGINT        NOT NULL COMMENT '任务ID',
+    report_id        BIGINT        NOT NULL COMMENT '报告ID',
+    report_version   INT           NOT NULL COMMENT '报告版本',
+    action_type      VARCHAR(32)   NOT NULL COMMENT '复核动作：SUBMIT / CONFIRM / SUPPLEMENT / AMEND / REJECT / REQUEST_MATERIAL / REANALYZE / FINALIZE',
+    from_status      VARCHAR(32)   NOT NULL COMMENT '动作前报告状态',
+    to_status        VARCHAR(32)   NOT NULL COMMENT '动作后报告状态',
+    field_key        VARCHAR(64)   DEFAULT NULL COMMENT '修正章节编码（仅修正动作）',
+    original_value   TEXT          COMMENT '修正前内容',
+    amended_value    TEXT          COMMENT '修正后内容',
+    reviewer         VARCHAR(64)   NOT NULL COMMENT '复核人',
+    reason           VARCHAR(500)  DEFAULT NULL COMMENT '复核原因',
+    remark           VARCHAR(1000) DEFAULT NULL COMMENT '复核意见',
+    evidence_ids     JSON          DEFAULT NULL COMMENT '关联证据ID集合',
+    creator          VARCHAR(64)   DEFAULT NULL COMMENT '创建人',
+    create_time      DATETIME(3)   NOT NULL DEFAULT CURRENT_TIMESTAMP(3) COMMENT '创建时间',
+    updater          VARCHAR(64)   DEFAULT NULL COMMENT '更新人',
+    update_time      DATETIME(3)   NOT NULL DEFAULT CURRENT_TIMESTAMP(3) ON UPDATE CURRENT_TIMESTAMP(3) COMMENT '更新时间',
+    del_flag         TINYINT       NOT NULL DEFAULT 0 COMMENT '删除标志：0 未删 1 已删',
+    PRIMARY KEY (id),
+    KEY idx_review_task_version (task_id, report_version),
+    KEY idx_review_report_id (report_id)
+) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COMMENT '尽调报告人工复核留痕（P7）';
