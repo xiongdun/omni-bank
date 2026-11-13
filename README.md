@@ -40,6 +40,7 @@ omni-bank
     ├── omni-bank-common-excel       # EasyExcel 导入导出工具
     ├── omni-bank-common-threadpool  # 统一业务线程池：参数可配 + TTL 上下文装饰 + 优雅关闭（自动装配）
 ├── omni-bank-gateway                # API 网关：统一对外入口（Nacos 发现路由转发 + Sentinel 限流熔断 + 全局跨域）
+├── omni-bank-ui                     # 尽调工作台前端：Vue 3 + TypeScript + Vite + Element Plus，独立构建；开发态 /api 代理到 agent 服务
 └── omni-bank-service                # 业务服务聚合模块（8 大业务域，每域 api + boot 双模块；信贷域另含 6 个场景子模块）
     ├── omni-bank-service-customer      # 客户域：客户/KYC（8101）
     ├── omni-bank-service-product       # 产品域：信贷产品工厂（8102）
@@ -168,7 +169,13 @@ mvn spring-boot:run -pl omni-bank-gateway
 
 # 启动业务服务（以信贷域为例，端口 8103；探活统一 /actuator/health）
 mvn spring-boot:run -pl omni-bank-service/omni-bank-service-credit/omni-bank-service-credit-boot
+
+# 启动尽调工作台前端（Node 20+，默认 http://localhost:5173/workbench）
+# 开发态 /api 代理到 http://localhost:8109（与网关 StripPrefix=1 行为对齐）
+cd omni-bank-ui && npm install && npm run dev
 ```
+
+**前端说明**（`omni-bank-ui`，尽调工作台）：Vue 3 + TypeScript + Vite + Element Plus 独立工程，不参与 Maven 聚合构建；覆盖任务列表、Agent 执行进度（SSE）、报告复核、风险线索与补充材料、计划与证据溯源，详见 [omni-bank-ui/README.md](omni-bank-ui/README.md)。
 
 **网关说明**（`omni-bank-gateway`，统一对外入口）：
 

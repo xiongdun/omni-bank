@@ -73,3 +73,8 @@ Desktop.ini
 
 # -------- Node（如有前端构建） --------
 node_modules/
+dist/
+.vite/
+
+# -------- 本地协作工具产物 --------
+.superpowers/

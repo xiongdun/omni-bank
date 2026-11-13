@@ -123,6 +123,7 @@ omni-bank/
 │   ├── omni-bank-common-excel
 │   └── omni-bank-common-threadpool   # TTL 装饰的统一业务线程池
 ├── omni-bank-gateway/            # SCG + Sentinel 限流熔断 + Nacos 发现路由
+├── omni-bank-ui/                 # 尽调工作台前端（Vue 3 + TS + Vite + Element Plus，独立构建）
 └── omni-bank-service/            # 业务域
     ├── omni-bank-service-customer     # 8101
     ├── omni-bank-service-product      # 8102
@@ -139,6 +140,8 @@ omni-bank/
 
 - **场景型域（如 credit）**：`父模块` + `场景子模块` + `boot`。场景模块内部 DDD 分层（`application` / `domain` / `infrastructure`），**不含 controller 与 rpc**；`adapter.web` / `adapter.rpc` 统一收口在 boot。
 - **简单型域（system / agent）**：`api` + `boot` 双模块，业务代码全部放 boot 内 MVC 包结构（controller / service / mapper / entity / dto），按业务包名区分场景，不再拆场景子模块。
+
+**前端工程（omni-bank-ui）**：Vue 3 + TypeScript + Vite + Element Plus，独立于 Maven 聚合构建。开发态 `/api` 代理到 agent 服务 8109 并剥离前缀（与网关 `StripPrefix=1` 对齐）；生产构建产物 `dist/` 由静态服务器托管。前端仅通过 HTTP 访问后端，不得引入跨域直连或 Dubbo 调用。
 
 **端口与错误码号段**：
 
@@ -181,6 +184,9 @@ mvn spring-boot:run -pl omni-bank-gateway
 
 # 本地启动业务服务（以 agent 为例，端口 8109）
 mvn spring-boot:run -pl omni-bank-service/omni-bank-service-agent/omni-bank-service-agent-boot
+
+# 尽调工作台前端（Node 20+，默认 http://localhost:5173/workbench；/api 代理到 8109）
+cd omni-bank-ui && npm install && npm run dev
 ```
 
 **本地环境要求**：JDK 21、Maven 3.9+、MySQL 8.x（库名 `omni_bank`）。首次运行需执行 `docs/sql/*.sql`，否则 HikariCP 初始化会阻断启动。
