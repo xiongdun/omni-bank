@@ -177,6 +177,8 @@ cd omni-bank-ui && npm install && npm run dev
 
 **前端说明**（`omni-bank-ui`，尽调工作台）：Vue 3 + TypeScript + Vite + Element Plus 独立工程，不参与 Maven 聚合构建；覆盖任务列表、Agent 执行进度（SSE）、报告复核、风险线索与补充材料、计划与证据溯源，详见 [omni-bank-ui/README.md](omni-bank-ui/README.md)。
 
+**部署与联调**：镜像构建、compose 一键环境、端到端联调检查清单与 k6 压测脚本见 [docs/deploy/README.md](docs/deploy/README.md)。
+
 **网关说明**（`omni-bank-gateway`，统一对外入口）：
 
 - **路由转发**：Nacos 服务发现自动路由（`discovery.locator`，`/{服务名}/**` → `lb://{服务名}`）+ 显式业务路由（`/api/{域}/**` → `lb://omni-bank-service-{域}`，`StripPrefix=1` 去前缀）；当前已登记 customer/product/credit/accounting/payment/recon/risk/agent 共 8 条，**system 待登记**，新服务在 `application.yml` 按模板补充

@@ -1,0 +1,53 @@
+# 尽调 Agent 本地/联调一键环境：MySQL 8 + agent 服务
+# 使用前提：已在仓库根构建 boot 模块 jar（见 docs/deploy/README.md）
+#   mvn -ntp -pl omni-bank-service/omni-bank-service-agent/omni-bank-service-agent-boot -am package -DskipTests
+#   docker compose -f docs/deploy/docker-compose.yml up -d --build
+services:
+  mysql:
+    image: mysql:8.0
+    container_name: omni-bank-mysql
+    command:
+      - --character-set-server=utf8mb4
+      - --collation-server=utf8mb4_unicode_ci
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:-root}
+      MYSQL_DATABASE: omni_bank
+      TZ: Asia/Shanghai
+    ports:
+      - "3306:3306"
+    volumes:
+      - mysql-data:/var/lib/mysql
+      # 初始化脚本按文件名顺序执行（脚本本身幂等，可重复执行）
+      - ../sql/omni_bank_sys.sql:/docker-entrypoint-initdb.d/01_sys.sql:ro
+      - ../sql/omni_bank_ai.sql:/docker-entrypoint-initdb.d/02_ai.sql:ro
+      - ../sql/omni_bank_dd.sql:/docker-entrypoint-initdb.d/03_dd.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "mysqladmin ping -h 127.0.0.1 -uroot -p$$MYSQL_ROOT_PASSWORD"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 30s
+
+  agent:
+    image: omni-bank-agent:1.0.0
+    container_name: omni-bank-agent
+    build:
+      context: ../../omni-bank-service/omni-bank-service-agent/omni-bank-service-agent-boot
+      dockerfile: Dockerfile
+    depends_on:
+      mysql:
+        condition: service_healthy
+    environment:
+      # local profile：关闭 Nacos 注册发现、Dubbo 注册地址 N/A，服务可独立启动
+      SPRING_PROFILES_ACTIVE: local
+      SPRING_DATASOURCE_URL: jdbc:mysql://mysql:3306/omni_bank?useUnicode=true&characterEncoding=utf8&serverTimezone=Asia/Shanghai&useSSL=false&allowPublicKeyRetrieval=true
+      MYSQL_USERNAME: root
+      MYSQL_PASSWORD: ${MYSQL_ROOT_PASSWORD:-root}
+      # 默认 MOCK 模型与 Mock 外部数据，不发起外部请求
+      OMNI_DD_LLM_MODE: MOCK
+    ports:
+      - "8109:8109"
+      - "20889:20889"
+
+volumes:
+  mysql-data:
