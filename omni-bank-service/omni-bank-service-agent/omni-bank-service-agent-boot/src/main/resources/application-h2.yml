@@ -1,0 +1,30 @@
+# 本地联调：H2 内存库，不依赖 MySQL/Docker。
+# 启动：mvn -Plocal-h2 -pl omni-bank-service/omni-bank-service-agent/omni-bank-service-agent-boot \
+#         spring-boot:run -Dspring-boot.run.profiles=h2
+# 注意：数据仅存于进程内存，重启即清空；表结构与 docs/sql/omni_bank_dd.sql 语义一致。
+spring:
+  datasource:
+    driver-class-name: org.h2.Driver
+    url: jdbc:h2:mem:omni_dd;MODE=MySQL;DATABASE_TO_LOWER=TRUE;DB_CLOSE_DELAY=-1
+    username: sa
+    password:
+  sql:
+    init:
+      mode: always
+      schema-locations: classpath:db/h2/dd-schema-h2.sql
+  cloud:
+    nacos:
+      discovery:
+        enabled: false
+
+omni:
+  thread-pool:
+    core-pool-size: 8
+    max-pool-size: 16
+    queue-capacity: 200
+    thread-name-prefix: agent-
+    await-termination-seconds: 30
+
+dubbo:
+  registry:
+    address: N/A

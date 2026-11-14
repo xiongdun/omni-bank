@@ -7,7 +7,7 @@ spring:
   sql:
     init:
       mode: always
-      schema-locations: classpath:dd-schema-h2.sql
+      schema-locations: classpath:db/h2/dd-schema-h2.sql
   cloud:
     nacos:
       discovery:

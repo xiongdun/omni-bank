@@ -91,6 +91,20 @@ mvn spring-boot:run -pl omni-bank-service/omni-bank-service-agent/omni-bank-serv
 
 服务启动后可访问 `http://localhost:8109/actuator/health`；数据库连接失败时 HikariCP 会直接阻断启动。
 
+### 5.1 无 MySQL/Docker：H2 内存库联调
+
+无需安装 MySQL 与 Docker，使用 `local-h2` Maven profile + `h2` Spring profile 直接启动，表结构由 `src/main/resources/db/h2/dd-schema-h2.sql` 初始化（与测试共用同一份 schema）。
+
+```bash
+mvn -Plocal-h2 -pl omni-bank-service/omni-bank-service-agent/omni-bank-service-agent-boot \
+  spring-boot:run -Dspring-boot.run.profiles=h2
+
+# 健康检查
+curl -s http://localhost:8109/actuator/health
+```
+
+限制：数据仅存于进程内存，重启清空；H2 数据不能作为性能基线对比 MySQL 的依据，只用于功能联调。
+
 ## 6. 前端联调
 
 ```bash
@@ -141,6 +155,9 @@ curl -s "http://localhost:8109/v1/dd/tasks/{taskId}/supplements?current=1&size=1
 ```bash
 # 安装 k6 后执行；TASK_ID 可选，提供后会额外压任务详情/状态/执行记录
 k6 run -e BASE_URL=http://localhost:8109 -e TASK_ID={taskId} docs/deploy/perf/dd-api.js
+
+# 无 k6 时的兜底脚本（Node 18+ 内置 fetch，无第三方依赖）
+TASK_ID={taskId} node docs/deploy/perf/dd-read-bench.mjs
 ```
 
 阈值（与 `REQUIREMENTS.md` 非功能要求一致）：
@@ -154,9 +171,9 @@ k6 run -e BASE_URL=http://localhost:8109 -e TASK_ID={taskId} docs/deploy/perf/dd
 
 | 日期 | 环境 | 数据量（任务数） | VU | P95(ms) | 失败率 | 备注 |
 |---|---|---|---|---|---|---|
-| 待执行 | 本机/联调环境 | 待执行 | 20 | 待执行 | 待执行 | 需先完成第 7 节联调 |
+| 2026-11-14 | 本机 H2（内存库） | 1 任务 / 47 执行记录 / 12 报告版本 | 20 | 22.6 | 0% | `dd-read-bench.mjs`，400 请求，P50 7.5ms / P99 27.5ms；非 MySQL 基线，仅供功能联调参考 |
 
-> 当前仓库环境（本机无 Docker、无 MySQL）未能执行压测，表中数据需在联调环境就绪后回填；不要把未实测数值写成结论。
+> 真实 MySQL 环境的基线待联调环境就绪后回填，不要把 H2 数值当作生产容量结论。
 
 ## 9. 常见故障排查
 

@@ -185,6 +185,9 @@ mvn spring-boot:run -pl omni-bank-gateway
 # 本地启动业务服务（以 agent 为例，端口 8109）
 mvn spring-boot:run -pl omni-bank-service/omni-bank-service-agent/omni-bank-service-agent-boot
 
+# 无 MySQL/Docker 时用 H2 内存库启动 agent（数据重启清空，仅功能联调）
+mvn -Plocal-h2 -pl omni-bank-service/omni-bank-service-agent/omni-bank-service-agent-boot spring-boot:run -Dspring-boot.run.profiles=h2
+
 # 尽调工作台前端（Node 20+，默认 http://localhost:5173/workbench；/api 代理到 8109）
 cd omni-bank-ui && npm install && npm run dev
 ```

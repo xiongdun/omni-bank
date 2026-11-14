@@ -177,7 +177,7 @@ cd omni-bank-ui && npm install && npm run dev
 
 **前端说明**（`omni-bank-ui`，尽调工作台）：Vue 3 + TypeScript + Vite + Element Plus 独立工程，不参与 Maven 聚合构建；覆盖任务列表、Agent 执行进度（SSE）、报告复核、风险线索与补充材料、计划与证据溯源，详见 [omni-bank-ui/README.md](omni-bank-ui/README.md)。
 
-**部署与联调**：镜像构建、compose 一键环境、端到端联调检查清单与 k6 压测脚本见 [docs/deploy/README.md](docs/deploy/README.md)。
+**部署与联调**：镜像构建、compose 一键环境、端到端联调检查清单与 k6 压测脚本见 [docs/deploy/README.md](docs/deploy/README.md)；本机无 MySQL/Docker 时可用 H2 内存库：`mvn -Plocal-h2 -pl omni-bank-service/omni-bank-service-agent/omni-bank-service-agent-boot spring-boot:run -Dspring-boot.run.profiles=h2`。
 
 **网关说明**（`omni-bank-gateway`，统一对外入口）：
 
