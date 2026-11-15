@@ -11,7 +11,7 @@ import com.omnibank.service.agent.dd.ai.CreditAgent;
 import com.omnibank.service.agent.dd.ai.EvidenceRef;
 import com.omnibank.service.agent.dd.dto.enterprise.EnterpriseVO;
 import com.omnibank.service.agent.dd.enums.EvidenceType;
-import com.omnibank.service.agent.dd.tool.ToolRegistry;
+import com.omnibank.service.agent.dd.tool.ToolInvoker;
 import com.omnibank.service.agent.dd.tool.ToolRequest;
 import com.omnibank.service.agent.dd.tool.ToolResult;
 import com.omnibank.service.agent.dd.tool.impl.AdministrativePenaltiesSnapshot;
@@ -46,7 +46,7 @@ public class JudicialRiskAgent implements CreditAgent<JudicialRiskInput, Judicia
 
     private static final AgentDefinition DEFINITION = buildDefinition();
 
-    private final ToolRegistry toolRegistry;
+    private final ToolInvoker toolInvoker;
 
     @Override
     public String getAgentCode() {
@@ -248,13 +248,12 @@ public class JudicialRiskAgent implements CreditAgent<JudicialRiskInput, Judicia
                 confidence, completeness, summary);
     }
 
-    @SuppressWarnings("unchecked")
     private <T> ToolResult<T> call(String toolCode, AgentContext context, String enterpriseName, String creditCode) {
         Map<String, Object> params = Map.of(
                 "enterpriseName", nullToEmpty(enterpriseName),
                 "creditCode", nullToEmpty(creditCode),
                 "enterpriseId", context.getEnterpriseId() == null ? "" : String.valueOf(context.getEnterpriseId()));
-        return (ToolResult<T>) toolRegistry.require(toolCode).execute(new ToolRequest(context.getTaskId(), params));
+        return toolInvoker.invoke(toolCode, new ToolRequest(context.getTaskId(), params));
     }
 
     private boolean isMock(ToolResult<?> result) {

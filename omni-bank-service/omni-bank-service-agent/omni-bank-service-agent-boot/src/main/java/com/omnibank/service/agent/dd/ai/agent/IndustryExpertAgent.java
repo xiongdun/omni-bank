@@ -10,7 +10,7 @@ import com.omnibank.service.agent.dd.ai.AgentSupplementRequest;
 import com.omnibank.service.agent.dd.ai.CreditAgent;
 import com.omnibank.service.agent.dd.ai.EvidenceRef;
 import com.omnibank.service.agent.dd.enums.EvidenceType;
-import com.omnibank.service.agent.dd.tool.ToolRegistry;
+import com.omnibank.service.agent.dd.tool.ToolInvoker;
 import com.omnibank.service.agent.dd.tool.ToolRequest;
 import com.omnibank.service.agent.dd.tool.ToolResult;
 import com.omnibank.service.agent.dd.tool.impl.IndustryBenchmarkSnapshot;
@@ -53,7 +53,7 @@ public class IndustryExpertAgent implements CreditAgent<Void, IndustryExpertData
 
     private static final AgentDefinition DEFINITION = buildDefinition();
 
-    private final ToolRegistry toolRegistry;
+    private final ToolInvoker toolInvoker;
 
     @Override
     public String getAgentCode() {
@@ -340,9 +340,8 @@ public class IndustryExpertAgent implements CreditAgent<Void, IndustryExpertData
         evidenceRefs.add(ref);
     }
 
-    @SuppressWarnings("unchecked")
     private <T> ToolResult<T> call(String toolCode, ToolRequest request) {
-        return (ToolResult<T>) toolRegistry.require(toolCode).execute(request);
+        return toolInvoker.invoke(toolCode, request);
     }
 
     private AgentResult<IndustryExpertData> result(AgentContext context, IndustryExpertData data,

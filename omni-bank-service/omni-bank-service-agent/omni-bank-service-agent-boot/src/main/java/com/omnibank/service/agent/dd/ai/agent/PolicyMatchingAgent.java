@@ -11,7 +11,7 @@ import com.omnibank.service.agent.dd.ai.CreditAgent;
 import com.omnibank.service.agent.dd.ai.EvidenceRef;
 import com.omnibank.service.agent.dd.dto.application.LoanApplicationVO;
 import com.omnibank.service.agent.dd.enums.EvidenceType;
-import com.omnibank.service.agent.dd.tool.ToolRegistry;
+import com.omnibank.service.agent.dd.tool.ToolInvoker;
 import com.omnibank.service.agent.dd.tool.ToolRequest;
 import com.omnibank.service.agent.dd.tool.ToolResult;
 import com.omnibank.service.agent.dd.tool.impl.PolicySnapshots;
@@ -58,7 +58,7 @@ public class PolicyMatchingAgent implements CreditAgent<Void, PolicyMatchingData
 
     private static final AgentDefinition DEFINITION = buildDefinition();
 
-    private final ToolRegistry toolRegistry;
+    private final ToolInvoker toolInvoker;
 
     @Override
     public String getAgentCode() {
@@ -424,13 +424,12 @@ public class PolicyMatchingAgent implements CreditAgent<Void, PolicyMatchingData
         return ref;
     }
 
-    @SuppressWarnings("unchecked")
     private <T> ToolResult<T> call(String toolCode, ToolRequest request) {
-        return (ToolResult<T>) toolRegistry.require(toolCode).execute(request);
+        return toolInvoker.invoke(toolCode, request);
     }
 
     private void warnIfMock(String toolCode, ToolResult<?> toolResult, List<String> warnings) {
-        if (toolRegistry.require(toolCode).getDefinition().isMock()) {
+        if (toolInvoker.definition(toolCode).isMock()) {
             warnings.add("工具【" + toolCode + "】返回 Mock 制度数据（来源 " + toolResult.getSource()
                     + "），结论仅用于链路验证");
         }

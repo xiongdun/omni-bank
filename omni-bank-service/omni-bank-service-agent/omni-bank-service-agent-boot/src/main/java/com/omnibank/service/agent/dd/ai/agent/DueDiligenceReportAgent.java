@@ -15,7 +15,7 @@ import com.omnibank.service.agent.dd.enums.ReportReviewStatus;
 import com.omnibank.service.agent.dd.enums.ReportStatus;
 import com.omnibank.service.agent.dd.plan.DdAgentCatalog;
 import com.omnibank.service.agent.dd.support.DdJsonSupport;
-import com.omnibank.service.agent.dd.tool.ToolRegistry;
+import com.omnibank.service.agent.dd.tool.ToolInvoker;
 import com.omnibank.service.agent.dd.tool.ToolRequest;
 import com.omnibank.service.agent.dd.tool.ToolResult;
 import com.omnibank.service.agent.dd.tool.impl.ReportSnapshots;
@@ -75,7 +75,7 @@ public class DueDiligenceReportAgent implements CreditAgent<Void, DueDiligenceRe
             DdAgentCatalog.POLICY_MATCHING,
             DdAgentCatalog.COMPREHENSIVE_RISK_ASSESSMENT);
 
-    private final ToolRegistry toolRegistry;
+    private final ToolInvoker toolInvoker;
 
     private final DdJsonSupport jsonSupport;
 
@@ -622,9 +622,8 @@ public class DueDiligenceReportAgent implements CreditAgent<Void, DueDiligenceRe
         return value == null || String.valueOf(value).isBlank() ? "-" : String.valueOf(value);
     }
 
-    @SuppressWarnings("unchecked")
     private <T> ToolResult<T> call(String toolCode, ToolRequest request) {
-        return (ToolResult<T>) toolRegistry.require(toolCode).execute(request);
+        return toolInvoker.invoke(toolCode, request);
     }
 
     private static AgentDefinition buildDefinition() {
