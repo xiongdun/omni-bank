@@ -268,7 +268,7 @@ CREATE TABLE IF NOT EXISTS dd_due_diligence_report (
     evidence_count   INT           NOT NULL DEFAULT 0 COMMENT '引用证据数量',
     data_gap_count   INT           NOT NULL DEFAULT 0 COMMENT '数据缺口数量',
     supplement_count INT           NOT NULL DEFAULT 0 COMMENT '补充材料请求数量',
-    export_status    VARCHAR(32)   DEFAULT NULL COMMENT '导出状态：NOT_AVAILABLE 等',
+    export_status    VARCHAR(32)   DEFAULT NULL COMMENT '导出状态：WORD_AVAILABLE（支持 Word 导出）/ NOT_AVAILABLE',
     model_version    VARCHAR(128)  DEFAULT NULL COMMENT '模型版本',
     prompt_version   VARCHAR(64)   DEFAULT NULL COMMENT 'Prompt 版本',
     generated_at     DATETIME(3)   DEFAULT NULL COMMENT '生成时间',

@@ -47,7 +47,8 @@ public enum DdErrorCode implements ErrorCode {
     FINDING_NOT_FOUND("230134", "风险线索不存在"),
     SUPPLEMENT_REQUEST_NOT_FOUND("230135", "补充材料请求不存在"),
     SUPPLEMENT_REQUEST_STATUS_NOT_ALLOWED("230136", "补充材料请求当前状态不允许该操作"),
-    PLAN_NOT_FOUND("230137", "尽调计划不存在");
+    PLAN_NOT_FOUND("230137", "尽调计划不存在"),
+    REPORT_EXPORT_FAILED("230138", "尽调报告导出失败");
 
     private final String code;
 

@@ -47,7 +47,7 @@ public class DdDueDiligenceReport extends BaseEntity {
     /** 补充材料请求数量 */
     private Integer supplementCount;
 
-    /** 导出状态，P7 固定 NOT_AVAILABLE */
+    /** 导出状态：WORD_AVAILABLE 表示支持 Word 导出，PDF 渲染待接入 */
     private String exportStatus;
 
     /** 模型版本 */

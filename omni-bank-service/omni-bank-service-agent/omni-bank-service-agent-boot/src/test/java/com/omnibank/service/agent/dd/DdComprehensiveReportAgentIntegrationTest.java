@@ -69,7 +69,7 @@ class DdComprehensiveReportAgentIntegrationTest {
     }
 
     @Test
-    void 尽调报告Agent输出18章草稿并标记导出不可用() {
+    void 尽调报告Agent输出18章草稿并标记导出可用性() {
         long taskId = submittedTask();
 
         AgentResult<DueDiligenceReportData> result = agentRuntime.execute(
@@ -86,17 +86,17 @@ class DdComprehensiveReportAgentIntegrationTest {
         assertThat(data.getCompleteness()).isLessThan(new BigDecimal("0.50"));
         assertThat(data.getMissingInputs()).isNotEmpty();
         assertThat(data.getValidationIssues()).isNotEmpty();
-        assertThat(data.getExportInfo().getWordStatus()).isEqualTo("NOT_AVAILABLE");
+        assertThat(data.getExportInfo().getWordStatus()).isEqualTo("AVAILABLE");
         assertThat(data.getExportInfo().getPdfStatus()).isEqualTo("NOT_AVAILABLE");
-        assertThat(data.getExportInfo().getNote()).contains("未接入");
+        assertThat(data.getExportInfo().getNote()).contains("PDF");
         assertThat(data.getGenerationNote()).contains("复核");
         assertThat(result.getWarnings()).anyMatch(warning -> warning.contains("复核"));
 
         DdDueDiligenceReport persisted = reportService.latest(taskId);
         assertThat(persisted).isNotNull();
         assertThat(persisted.getReportVersion()).isEqualTo(data.getReportVersion());
-        assertThat(persisted.getContentJson()).contains("CREDIT_APPLICATION");
-        assertThat(persisted.getExportStatus()).isEqualTo("NOT_AVAILABLE");
+        assertThat(persisted.getContentJson()).contains("CREDIT_APPLICATION").contains("\"title\"");
+        assertThat(persisted.getExportStatus()).isEqualTo("WORD_AVAILABLE");
     }
 
     @Test

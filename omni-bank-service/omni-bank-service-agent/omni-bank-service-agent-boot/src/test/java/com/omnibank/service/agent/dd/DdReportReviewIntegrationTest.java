@@ -2,8 +2,10 @@ package com.omnibank.service.agent.dd;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.hamcrest.Matchers.containsString;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -19,12 +21,17 @@ import com.omnibank.service.agent.dd.enums.ReportReviewAction;
 import com.omnibank.service.agent.dd.service.DdOutboxPublisher;
 import com.omnibank.service.agent.dd.service.DdReportService;
 import com.omnibank.service.agent.dd.service.DdTaskService;
+import java.io.ByteArrayInputStream;
 import java.math.BigDecimal;
 import java.util.List;
+import java.util.stream.Collectors;
+import org.apache.poi.xwpf.usermodel.XWPFDocument;
+import org.apache.poi.xwpf.usermodel.XWPFParagraph;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
@@ -154,7 +161,7 @@ class DdReportReviewIntegrationTest {
                 .andExpect(jsonPath("$.code").value("000200"))
                 .andExpect(jsonPath("$.data.reportVersion").value(version))
                 .andExpect(jsonPath("$.data.chapters.length()").value(18))
-                .andExpect(jsonPath("$.data.exportStatus").value("NOT_AVAILABLE"));
+                .andExpect(jsonPath("$.data.exportStatus").value("WORD_AVAILABLE"));
 
         mockMvc.perform(post("/v1/dd/tasks/{taskId}/reports/{reportVersion}/review", taskId, version)
                         .contentType(MediaType.APPLICATION_JSON)
@@ -174,6 +181,35 @@ class DdReportReviewIntegrationTest {
                 .andExpect(jsonPath("$.data[0].reviewer").value("system"));
 
         mockMvc.perform(get("/v1/dd/tasks/{taskId}/reports/{reportVersion}", taskId, 99))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value("230129"));
+    }
+
+    @Test
+    void 报告版本可导出Word文档() throws Exception {
+        DdDueDiligenceReport report = generatedReport();
+        long taskId = report.getTaskId();
+        int version = report.getReportVersion();
+
+        byte[] content = mockMvc.perform(get("/v1/dd/tasks/{taskId}/reports/{reportVersion}/export/word",
+                        taskId, version))
+                .andExpect(status().isOk())
+                .andExpect(header().string(HttpHeaders.CONTENT_DISPOSITION, containsString(".docx")))
+                .andReturn()
+                .getResponse()
+                .getContentAsByteArray();
+
+        assertThat(content).isNotEmpty();
+        try (XWPFDocument document = new XWPFDocument(new ByteArrayInputStream(content))) {
+            String text = document.getParagraphs().stream()
+                    .map(XWPFParagraph::getText)
+                    .collect(Collectors.joining("\n"));
+            assertThat(text).contains(report.getTitle())
+                    .contains("报告编号")
+                    .contains("授信申请基本情况");
+        }
+
+        mockMvc.perform(get("/v1/dd/tasks/{taskId}/reports/{reportVersion}/export/word", taskId, 99))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.code").value("230129"));
     }

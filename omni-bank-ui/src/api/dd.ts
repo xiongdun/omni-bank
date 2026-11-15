@@ -1,4 +1,4 @@
-import { apiGet, apiPost } from './http'
+import { apiDownload, apiGet, apiPost } from './http'
 import type {
   AgentExecutionQuery,
   AgentExecutionVO,
@@ -73,6 +73,8 @@ export const ddApi = {
     apiPost<ReportDetailVO>(`${TASKS}/${taskId}/reports/${reportVersion}/review`, body),
   reportReviews: (taskId: Id, reportVersion: number) =>
     apiGet<ReportReviewVO[]>(`${TASKS}/${taskId}/reports/${reportVersion}/reviews`),
+  exportReportWord: (taskId: Id, reportVersion: number) =>
+    apiDownload(`${TASKS}/${taskId}/reports/${reportVersion}/export/word`),
 
   // ---------- 计划 ----------
   /** 任务尚未生成计划时后端返回 PLAN_NOT_FOUND，静默处理避免无意义提示 */

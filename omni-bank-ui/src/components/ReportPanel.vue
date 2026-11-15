@@ -25,6 +25,9 @@
           <span class="muted">证据 {{ detail.evidenceCount ?? 0 }} · 数据缺口 {{ detail.dataGapCount ?? 0 }} · 补充 {{ detail.supplementCount ?? 0 }}</span>
         </template>
         <span class="spacer" />
+        <el-button v-if="detail" size="small" :icon="Download" :loading="exporting" @click="exportWord">
+          导出 Word
+        </el-button>
         <el-button size="small" :icon="Refresh" circle title="刷新" @click="reload" />
       </div>
 
@@ -143,7 +146,7 @@
 <script setup lang="ts">
 import { computed, reactive, ref, watch } from 'vue'
 import { ElMessage } from 'element-plus'
-import { Refresh } from '@element-plus/icons-vue'
+import { Download, Refresh } from '@element-plus/icons-vue'
 import { ddApi } from '../api/dd'
 import type {
   Id,
@@ -176,6 +179,7 @@ const currentVersion = ref<number | null>(null)
 const detail = ref<ReportDetailVO | null>(null)
 const reviews = ref<ReportReviewVO[]>([])
 const submitting = ref(false)
+const exporting = ref(false)
 
 const reviewForm = reactive<{
   actionType: ReportReviewAction
@@ -245,6 +249,31 @@ function reload() {
   void loadVersions(false)
   void loadDetail()
   void loadReviews()
+}
+
+async function exportWord() {
+  if (!detail.value) {
+    return
+  }
+  const version = detail.value.reportVersion
+  if (version === undefined) {
+    return
+  }
+  exporting.value = true
+  try {
+    const blob = await ddApi.exportReportWord(props.taskId, version)
+    const url = URL.createObjectURL(blob)
+    const link = document.createElement('a')
+    link.href = url
+    link.download = `${detail.value.title || '尽调报告'}-${detail.value.reportNo || ''}-V${version}.docx`
+    link.click()
+    URL.revokeObjectURL(url)
+    ElMessage.success('报告已导出')
+  } catch {
+    // 错误提示由 http 层处理
+  } finally {
+    exporting.value = false
+  }
 }
 
 async function submitReview() {

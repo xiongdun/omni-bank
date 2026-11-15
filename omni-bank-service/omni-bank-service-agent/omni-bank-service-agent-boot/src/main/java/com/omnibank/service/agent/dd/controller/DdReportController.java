@@ -13,12 +13,18 @@ import com.omnibank.service.agent.dd.dto.report.ReportReviewVO;
 import com.omnibank.service.agent.dd.dto.report.ReportVersionVO;
 import com.omnibank.service.agent.dd.entity.DdDueDiligenceReport;
 import com.omnibank.service.agent.dd.entity.DdReportReview;
+import com.omnibank.service.agent.dd.service.DdReportExportService;
 import com.omnibank.service.agent.dd.service.DdReportService;
 import com.omnibank.service.agent.dd.support.DdJsonSupport;
 import jakarta.validation.Valid;
+import java.nio.charset.StandardCharsets;
 import java.util.List;
 import java.util.Map;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.ContentDisposition;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
 import org.springframework.util.StringUtils;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -35,7 +41,12 @@ import org.springframework.web.bind.annotation.RestController;
 @RequiredArgsConstructor
 public class DdReportController {
 
+    private static final String WORD_CONTENT_TYPE =
+            "application/vnd.openxmlformats-officedocument.wordprocessingml.document";
+
     private final DdReportService reportService;
+
+    private final DdReportExportService reportExportService;
 
     private final DdJsonSupport jsonSupport;
 
@@ -66,6 +77,19 @@ public class DdReportController {
         return Result.success(reportService.reviews(taskId, reportVersion).stream()
                 .map(this::reviewOf)
                 .toList());
+    }
+
+    /** 导出 Word（docx）：按报告版本渲染，文件名随 Content-Disposition 返回 */
+    @GetMapping("/{reportVersion}/export/word")
+    public ResponseEntity<byte[]> exportWord(@PathVariable Long taskId, @PathVariable Integer reportVersion) {
+        DdReportExportService.ExportFile file = reportExportService.exportWord(taskId, reportVersion);
+        return ResponseEntity.ok()
+                .contentType(MediaType.parseMediaType(WORD_CONTENT_TYPE))
+                .header(HttpHeaders.CONTENT_DISPOSITION, ContentDisposition.attachment()
+                        .filename(file.fileName(), StandardCharsets.UTF_8)
+                        .build()
+                        .toString())
+                .body(file.content());
     }
 
     private ReportVersionVO versionOf(DdDueDiligenceReport report) {

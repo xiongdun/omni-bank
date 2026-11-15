@@ -46,7 +46,7 @@ public class DueDiligenceReportAgent implements CreditAgent<Void, DueDiligenceRe
                     + "AI 不输出最终审批金额、不输出合规结论";
 
     public static final String EXPORT_NOTE =
-            "P7 仅生成结构化报告数据，Word/PDF 渲染能力未接入，导出能力在后续阶段实现";
+            "支持导出 Word（docx）；PDF 渲染能力尚未接入，导出能力按版本追溯";
 
     private static final String TOOL_TEMPLATE = "report.getTemplate";
 
@@ -119,10 +119,14 @@ public class DueDiligenceReportAgent implements CreditAgent<Void, DueDiligenceRe
             chapters.add(chapter);
 
             Map<String, Object> chapterMap = new LinkedHashMap<>();
+            chapterMap.put("chapterNo", chapter.getChapterNo());
             chapterMap.put("chapterCode", chapter.getChapterCode());
+            chapterMap.put("title", chapter.getTitle());
             chapterMap.put("status", chapter.getStatus());
             chapterMap.put("content", chapter.getContent());
             chapterMap.put("evidenceIds", chapter.getEvidenceIds());
+            chapterMap.put("dataGaps", chapter.getDataGaps());
+            chapterMap.put("limitation", chapter.getLimitation());
             chapterMaps.add(chapterMap);
 
             if (chapterTemplate.required() && !STATUS_AVAILABLE.equals(chapter.getStatus())) {
@@ -160,7 +164,7 @@ public class DueDiligenceReportAgent implements CreditAgent<Void, DueDiligenceRe
         data.setCompleteness(completeness(template, chapters));
         data.setConfidence(confidence(data.getCompleteness()));
         DueDiligenceReportData.ExportInfo exportInfo = new DueDiligenceReportData.ExportInfo();
-        exportInfo.setWordStatus("NOT_AVAILABLE");
+        exportInfo.setWordStatus("AVAILABLE");
         exportInfo.setPdfStatus("NOT_AVAILABLE");
         exportInfo.setNote(EXPORT_NOTE);
         data.setExportInfo(exportInfo);
@@ -229,7 +233,7 @@ public class DueDiligenceReportAgent implements CreditAgent<Void, DueDiligenceRe
         params.put("evidenceCount", data.getEvidenceCount());
         params.put("dataGapCount", data.getDataGapCount());
         params.put("supplementRequestCount", data.getSupplementRequestCount());
-        params.put("exportStatus", "NOT_AVAILABLE");
+        params.put("exportStatus", "WORD_AVAILABLE");
         params.put("modelVersion", "rule-engine");
         params.put("promptVersion", "rule-1.0");
         ToolResult<ReportSnapshots.VersionResult> toolResult = call(TOOL_VERSION,

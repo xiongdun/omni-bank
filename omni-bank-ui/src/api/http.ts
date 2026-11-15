@@ -60,3 +60,9 @@ export function apiGet<T>(url: string, params?: unknown, silent = false): Promis
 export function apiPost<T>(url: string, data?: unknown): Promise<T> {
   return request<T>({ method: 'POST', url, data })
 }
+
+/** 文件下载：二进制响应不走统一 Result 解包 */
+export async function apiDownload(url: string, params?: unknown): Promise<Blob> {
+  const response = await http.get<Blob>(url, { params, responseType: 'blob' })
+  return response.data
+}
