@@ -253,7 +253,7 @@ public class JudicialRiskAgent implements CreditAgent<JudicialRiskInput, Judicia
                 "enterpriseName", nullToEmpty(enterpriseName),
                 "creditCode", nullToEmpty(creditCode),
                 "enterpriseId", context.getEnterpriseId() == null ? "" : String.valueOf(context.getEnterpriseId()));
-        return toolInvoker.invoke(toolCode, new ToolRequest(context.getTaskId(), params));
+        return toolInvoker.invoke(AGENT_CODE, toolCode, new ToolRequest(context.getTaskId(), params));
     }
 
     private boolean isMock(ToolResult<?> result) {

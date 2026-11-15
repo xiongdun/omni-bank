@@ -425,7 +425,7 @@ public class PolicyMatchingAgent implements CreditAgent<Void, PolicyMatchingData
     }
 
     private <T> ToolResult<T> call(String toolCode, ToolRequest request) {
-        return toolInvoker.invoke(toolCode, request);
+        return toolInvoker.invoke(AGENT_CODE, toolCode, request);
     }
 
     private void warnIfMock(String toolCode, ToolResult<?> toolResult, List<String> warnings) {

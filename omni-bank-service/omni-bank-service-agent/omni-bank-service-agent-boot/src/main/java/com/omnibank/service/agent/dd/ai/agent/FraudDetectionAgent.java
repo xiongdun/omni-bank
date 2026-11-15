@@ -312,7 +312,7 @@ public class FraudDetectionAgent implements CreditAgent<Void, FraudDetectionData
     }
 
     private <T> ToolResult<T> call(String toolCode, ToolRequest request) {
-        return toolInvoker.invoke(toolCode, request);
+        return toolInvoker.invoke(AGENT_CODE, toolCode, request);
     }
 
     private EvidenceRef addToolEvidenceRef(List<EvidenceRef> evidenceRefs, ToolResult<?> toolResult,

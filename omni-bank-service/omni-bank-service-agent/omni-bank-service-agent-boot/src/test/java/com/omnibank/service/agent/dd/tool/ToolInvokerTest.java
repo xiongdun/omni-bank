@@ -11,11 +11,15 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 
 /**
- * Tool 统一调用层单元测试：参数校验、超时控制、异常隔离与结果透传。
+ * Tool 统一调用层单元测试：权限边界、参数校验、超时控制、异常隔离与结果透传。
  */
 class ToolInvokerTest {
 
+    private static final String AGENT_CODE = "TEST_AGENT";
+
     private final ExecutorService executor = Executors.newSingleThreadExecutor();
+
+    private final ToolPermissionRegistry permissions = new ToolPermissionRegistry();
 
     @AfterEach
     void tearDown() {
@@ -25,9 +29,9 @@ class ToolInvokerTest {
     @Test
     void 调用成功透传工具结果() {
         ToolInvoker invoker = invoker(tool("tool.ok", true, 0L,
-                request -> ToolResult.success("TEST", "ok", null, null)));
+                request -> ToolResult.success("TEST", "ok", null, null)), "tool.ok");
 
-        ToolResult<String> result = invoker.invoke("tool.ok", new ToolRequest(1L, Map.of()));
+        ToolResult<String> result = invoker.invoke(AGENT_CODE, "tool.ok", new ToolRequest(1L, Map.of()));
 
         assertThat(result.isSuccess()).isTrue();
         assertThat(result.getData()).isEqualTo("ok");
@@ -35,11 +39,22 @@ class ToolInvokerTest {
     }
 
     @Test
+    void 未授权工具返回权限不足() {
+        ToolInvoker invoker = invoker(tool("tool.secret", true, 0L,
+                request -> ToolResult.success("TEST", "secret", null, null)), "tool.ok");
+
+        ToolResult<String> result = invoker.invoke(AGENT_CODE, "tool.secret", new ToolRequest(1L, Map.of()));
+
+        assertThat(result.isSuccess()).isFalse();
+        assertThat(result.getErrorCode()).isEqualTo(DdErrorCode.TOOL_PERMISSION_DENIED.getCode());
+    }
+
+    @Test
     void 缺少taskId返回参数不合法() {
         ToolInvoker invoker = invoker(tool("tool.ok", true, 0L,
-                request -> ToolResult.success("TEST", "ok", null, null)));
+                request -> ToolResult.success("TEST", "ok", null, null)), "tool.ok");
 
-        ToolResult<String> result = invoker.invoke("tool.ok", new ToolRequest(null, Map.of()));
+        ToolResult<String> result = invoker.invoke(AGENT_CODE, "tool.ok", new ToolRequest(null, Map.of()));
 
         assertThat(result.isSuccess()).isFalse();
         assertThat(result.getErrorCode()).isEqualTo(DdErrorCode.TOOL_PARAM_INVALID.getCode());
@@ -50,9 +65,9 @@ class ToolInvokerTest {
         ToolInvoker invoker = invoker(tool("tool.slow", false, 50L, request -> {
             sleep(1000L);
             return ToolResult.success("TEST", "late", null, null);
-        }));
+        }), "tool.slow");
 
-        ToolResult<String> result = invoker.invoke("tool.slow", new ToolRequest(1L, Map.of()));
+        ToolResult<String> result = invoker.invoke(AGENT_CODE, "tool.slow", new ToolRequest(1L, Map.of()));
 
         assertThat(result.isSuccess()).isFalse();
         assertThat(result.getErrorCode()).isEqualTo(DdErrorCode.TOOL_TIMEOUT.getCode());
@@ -62,16 +77,17 @@ class ToolInvokerTest {
     void 工具抛异常返回执行失败() {
         ToolInvoker invoker = invoker(tool("tool.error", true, 0L, request -> {
             throw new IllegalStateException("boom");
-        }));
+        }), "tool.error");
 
-        ToolResult<String> result = invoker.invoke("tool.error", new ToolRequest(1L, Map.of()));
+        ToolResult<String> result = invoker.invoke(AGENT_CODE, "tool.error", new ToolRequest(1L, Map.of()));
 
         assertThat(result.isSuccess()).isFalse();
         assertThat(result.getErrorCode()).isEqualTo(DdErrorCode.TOOL_EXECUTION_FAILED.getCode());
     }
 
-    private ToolInvoker invoker(AgentTool<?> tool) {
-        return new ToolInvoker(new ToolRegistry(List.of(tool)), executor);
+    private ToolInvoker invoker(AgentTool<?> tool, String... allowedTools) {
+        permissions.register(AGENT_CODE, List.of(allowedTools));
+        return new ToolInvoker(new ToolRegistry(List.of(tool)), permissions, executor);
     }
 
     private AgentTool<String> tool(String toolCode, boolean mock, long timeoutMs, ToolBody body) {

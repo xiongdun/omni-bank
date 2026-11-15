@@ -13,7 +13,7 @@ import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.stereotype.Component;
 
 /**
- * Tool 统一调用层：参数校验、超时控制、异常隔离与调用审计
+ * Tool 统一调用层：权限边界、参数校验、超时控制、异常隔离与调用审计
  */
 @Component
 public class ToolInvoker {
@@ -22,10 +22,14 @@ public class ToolInvoker {
 
     private final ToolRegistry registry;
 
+    private final ToolPermissionRegistry permissions;
+
     private final Executor executor;
 
-    public ToolInvoker(ToolRegistry registry, @Qualifier("ttlExecutor") Executor executor) {
+    public ToolInvoker(ToolRegistry registry, ToolPermissionRegistry permissions,
+                       @Qualifier("ttlExecutor") Executor executor) {
         this.registry = registry;
+        this.permissions = permissions;
         this.executor = executor;
     }
 
@@ -33,12 +37,17 @@ public class ToolInvoker {
         return registry.require(toolCode).getDefinition();
     }
 
-    public <T> ToolResult<T> invoke(String toolCode, ToolRequest request) {
+    public <T> ToolResult<T> invoke(String agentCode, String toolCode, ToolRequest request) {
         AgentTool<T> tool = registry.require(toolCode);
         ToolDefinition definition = tool.getDefinition();
         long startNanos = System.nanoTime();
+        if (!permissions.allowed(agentCode, toolCode)) {
+            return audit(agentCode, toolCode, definition, request, ToolResult.failure(toolCode,
+                    DdErrorCode.TOOL_PERMISSION_DENIED.getCode(),
+                    "Agent【" + agentCode + "】无权调用工具：" + toolCode), startNanos);
+        }
         if (request == null || request.taskId() == null) {
-            return audit(toolCode, definition, request, ToolResult.failure(toolCode,
+            return audit(agentCode, toolCode, definition, request, ToolResult.failure(toolCode,
                     DdErrorCode.TOOL_PARAM_INVALID.getCode(), "工具调用缺少 taskId，无法归属任务上下文"), startNanos);
         }
         ToolResult<T> result;
@@ -52,11 +61,11 @@ public class ToolInvoker {
             result = ToolResult.failure(toolCode, DdErrorCode.TOOL_EXECUTION_FAILED.getCode(),
                     "工具调用被中断：" + toolCode);
         } catch (RuntimeException e) {
-            log.error("dd.tool.error toolCode={} taskId={}", toolCode, request.taskId(), e);
+            log.error("dd.tool.error agentCode={} toolCode={} taskId={}", agentCode, toolCode, request.taskId(), e);
             result = ToolResult.failure(toolCode, DdErrorCode.TOOL_EXECUTION_FAILED.getCode(),
                     "工具调用执行失败：" + toolCode);
         }
-        return audit(toolCode, definition, request, result, startNanos);
+        return audit(agentCode, toolCode, definition, request, result, startNanos);
     }
 
     /** Mock 与本地规则工具同步执行以复用调用方事务；声明超时的真实工具走线程池，超时后中断并返回失败 */
@@ -80,16 +89,16 @@ public class ToolInvoker {
         }
     }
 
-    private <T> ToolResult<T> audit(String toolCode, ToolDefinition definition, ToolRequest request,
-                                    ToolResult<T> result, long startNanos) {
+    private <T> ToolResult<T> audit(String agentCode, String toolCode, ToolDefinition definition,
+                                    ToolRequest request, ToolResult<T> result, long startNanos) {
         long costMs = (System.nanoTime() - startNanos) / 1_000_000;
         if (result.isSuccess()) {
-            log.info("dd.tool.call toolCode={} taskId={} mock={} status={} costMs={} evidenceCount={}",
-                    toolCode, request == null ? null : request.taskId(), definition.isMock(),
+            log.info("dd.tool.call agentCode={} toolCode={} taskId={} mock={} status={} costMs={} evidenceCount={}",
+                    agentCode, toolCode, request == null ? null : request.taskId(), definition.isMock(),
                     result.getStatus(), costMs, result.getEvidenceIds().size());
         } else {
-            log.warn("dd.tool.call toolCode={} taskId={} mock={} status={} costMs={} errorCode={}",
-                    toolCode, request == null ? null : request.taskId(), definition.isMock(),
+            log.warn("dd.tool.call agentCode={} toolCode={} taskId={} mock={} status={} costMs={} errorCode={}",
+                    agentCode, toolCode, request == null ? null : request.taskId(), definition.isMock(),
                     result.getStatus(), costMs, result.getErrorCode());
         }
         return result;

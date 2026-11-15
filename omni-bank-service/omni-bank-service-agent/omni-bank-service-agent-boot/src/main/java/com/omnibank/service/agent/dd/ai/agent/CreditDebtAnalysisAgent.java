@@ -338,7 +338,7 @@ public class CreditDebtAnalysisAgent implements CreditAgent<Void, CreditDebtAnal
 
     @SuppressWarnings("unchecked")
     private <T> ToolResult<T> call(String toolCode, ToolRequest request) {
-        return toolInvoker.invoke(toolCode, request);
+        return toolInvoker.invoke(AGENT_CODE, toolCode, request);
     }
 
     private void warnIfMock(String toolCode, ToolResult<?> toolResult, List<String> warnings) {

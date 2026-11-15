@@ -341,7 +341,7 @@ public class IndustryExpertAgent implements CreditAgent<Void, IndustryExpertData
     }
 
     private <T> ToolResult<T> call(String toolCode, ToolRequest request) {
-        return toolInvoker.invoke(toolCode, request);
+        return toolInvoker.invoke(AGENT_CODE, toolCode, request);
     }
 
     private AgentResult<IndustryExpertData> result(AgentContext context, IndustryExpertData data,

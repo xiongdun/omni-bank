@@ -2,24 +2,27 @@ package com.omnibank.service.agent.dd.ai;
 
 import com.omnibank.common.core.exception.BizException;
 import com.omnibank.service.agent.api.enums.DdErrorCode;
+import com.omnibank.service.agent.dd.tool.ToolPermissionRegistry;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import org.springframework.stereotype.Component;
 
 /**
- * Agent 注册表：按 agentCode 发现 Agent，重复注册在启动期直接失败
+ * Agent 注册表：按 agentCode 发现 Agent，重复注册在启动期直接失败；
+ * 注册时把 AgentDefinition.requiredTools 写入 Tool 权限边界，工具调用前统一校验。
  */
 @Component
 public class AgentRegistry {
 
     private final Map<String, CreditAgent<?, ?>> agents = new LinkedHashMap<>();
 
-    public AgentRegistry(List<CreditAgent<?, ?>> agentList) {
+    public AgentRegistry(List<CreditAgent<?, ?>> agentList, ToolPermissionRegistry permissionRegistry) {
         for (CreditAgent<?, ?> agent : agentList) {
             if (agents.putIfAbsent(agent.getAgentCode(), agent) != null) {
                 throw new IllegalStateException("Agent 编码重复注册：" + agent.getAgentCode());
             }
+            permissionRegistry.register(agent.getAgentCode(), agent.getDefinition().getRequiredTools());
         }
     }
 

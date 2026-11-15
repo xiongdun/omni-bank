@@ -312,7 +312,7 @@ public class DocumentRecognitionAgent implements CreditAgent<Void, DocumentRecog
 
     @SuppressWarnings("unchecked")
     private <T> ToolResult<T> call(String toolCode, ToolRequest request) {
-        return toolInvoker.invoke(toolCode, request);
+        return toolInvoker.invoke(AGENT_CODE, toolCode, request);
     }
 
     private AgentResult<DocumentRecognitionData> result(AgentContext context, DocumentRecognitionData data,

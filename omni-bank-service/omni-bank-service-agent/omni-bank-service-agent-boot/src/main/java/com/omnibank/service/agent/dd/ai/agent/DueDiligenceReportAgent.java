@@ -623,7 +623,7 @@ public class DueDiligenceReportAgent implements CreditAgent<Void, DueDiligenceRe
     }
 
     private <T> ToolResult<T> call(String toolCode, ToolRequest request) {
-        return toolInvoker.invoke(toolCode, request);
+        return toolInvoker.invoke(AGENT_CODE, toolCode, request);
     }
 
     private static AgentDefinition buildDefinition() {
