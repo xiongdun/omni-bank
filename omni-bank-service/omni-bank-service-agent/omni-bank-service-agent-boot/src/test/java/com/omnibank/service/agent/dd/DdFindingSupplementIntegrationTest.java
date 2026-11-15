@@ -115,7 +115,7 @@ class DdFindingSupplementIntegrationTest {
     }
 
     @Test
-    void 完成补充请求触发增量重分析并生成新报告版本() {
+    void 全部补充完成后统一触发一次增量重分析且内容未变不新增报告版本() {
         long taskId = submittedTask("APPREANALYZE" + System.nanoTime());
         DdDueDiligenceReport before = reportService.latest(taskId);
         assertThat(before).isNotNull();
@@ -125,22 +125,34 @@ class DdFindingSupplementIntegrationTest {
         createReq.setDataCode("MANUAL-TEST-" + System.nanoTime());
         createReq.setDataName("手工补充测试材料");
         createReq.setReason("验证增量重分析");
-        SupplementRequestVO created = supplementRequestService.create(taskId, createReq);
+        supplementRequestService.create(taskId, createReq);
 
         CompleteSupplementReq completeReq = new CompleteSupplementReq();
         completeReq.setRemark("已补齐");
-        SupplementRequestVO completed = supplementRequestService.complete(taskId, created.getRequestId(),
-                completeReq);
+        for (SupplementRequestVO pending : pendingRequests(taskId)) {
+            SupplementRequestVO completed = supplementRequestService.complete(taskId,
+                    pending.getRequestId(), completeReq);
+            assertThat(completed.getStatus()).isEqualTo("COMPLETED");
+            assertThat(completed.getCompletedAt()).isNotNull();
+        }
 
-        assertThat(completed.getStatus()).isEqualTo("COMPLETED");
-        assertThat(completed.getCompletedAt()).isNotNull();
-        assertThat(taskService.status(taskId).getTaskStatus())
-                .isIn("WAITING_FOR_SUPPLEMENT", "WAITING_FOR_REVIEW");
+        assertThat(supplementRequestService.countPending(taskId)).isZero();
+        assertThat(taskService.status(taskId).getTaskStatus()).isEqualTo("WAITING_FOR_REVIEW");
         assertThat(countExecutions(taskId)).isGreaterThan(executionsBefore);
+        // 重分析未带来新信息，且已补充过的 dataCode 不再重复催办
+        assertThat(supplementRequestService.countPending(taskId)).isZero();
 
         DdDueDiligenceReport after = reportService.latest(taskId);
         assertThat(after).isNotNull();
-        assertThat(after.getReportVersion()).isGreaterThan(before.getReportVersion());
+        assertThat(after.getReportVersion()).isEqualTo(before.getReportVersion());
+    }
+
+    private java.util.List<SupplementRequestVO> pendingRequests(long taskId) {
+        SupplementQueryReq query = new SupplementQueryReq();
+        query.setCurrent(1);
+        query.setSize(100);
+        query.setStatus("PENDING");
+        return supplementRequestService.page(taskId, query).getRecords();
     }
 
     @Test

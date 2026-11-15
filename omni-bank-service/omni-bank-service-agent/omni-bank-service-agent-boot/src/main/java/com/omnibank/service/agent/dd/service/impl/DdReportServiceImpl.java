@@ -24,6 +24,7 @@ import com.omnibank.service.agent.dd.support.DdJsonSupport;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Set;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.ApplicationEventPublisher;
@@ -53,6 +54,14 @@ public class DdReportServiceImpl
                                               String reviewStatus, Object chapters, List<String> evidenceIds,
                                               int evidenceCount, int dataGapCount, int supplementCount,
                                               String exportStatus, String modelVersion, String promptVersion) {
+        String contentJson = jsonSupport.write(chapters);
+        String evidenceJson = jsonSupport.write(evidenceIds == null ? List.of() : evidenceIds);
+        DdDueDiligenceReport latest = latest(taskId);
+        if (latest != null && sameSnapshot(latest, title, reportStatus, reviewStatus,
+                contentJson, evidenceJson, evidenceCount, dataGapCount, supplementCount)) {
+            // 内容与状态均未变化（如补充材料未带来新信息），复用当前版本，避免版本号膨胀
+            return latest;
+        }
         int reportVersion = nextVersion(taskId);
         DdDueDiligenceReport report = new DdDueDiligenceReport();
         report.setTaskId(taskId);
@@ -61,8 +70,8 @@ public class DdReportServiceImpl
         report.setReportStatus(reportStatus);
         report.setReviewStatus(reviewStatus);
         report.setTitle(title);
-        report.setContentJson(jsonSupport.write(chapters));
-        report.setEvidenceIds(jsonSupport.write(evidenceIds == null ? List.of() : evidenceIds));
+        report.setContentJson(contentJson);
+        report.setEvidenceIds(evidenceJson);
         report.setEvidenceCount(evidenceCount);
         report.setDataGapCount(dataGapCount);
         report.setSupplementCount(supplementCount);
@@ -73,6 +82,19 @@ public class DdReportServiceImpl
         report.setVersion(0);
         save(report);
         return report;
+    }
+
+    private boolean sameSnapshot(DdDueDiligenceReport latest, String title, String reportStatus,
+                                 String reviewStatus, String contentJson, String evidenceJson,
+                                 int evidenceCount, int dataGapCount, int supplementCount) {
+        return Objects.equals(latest.getTitle(), title)
+                && Objects.equals(latest.getReportStatus(), reportStatus)
+                && Objects.equals(latest.getReviewStatus(), reviewStatus)
+                && Objects.equals(latest.getContentJson(), contentJson)
+                && Objects.equals(latest.getEvidenceIds(), evidenceJson)
+                && latest.getEvidenceCount() == evidenceCount
+                && latest.getDataGapCount() == dataGapCount
+                && latest.getSupplementCount() == supplementCount;
     }
 
     @Override

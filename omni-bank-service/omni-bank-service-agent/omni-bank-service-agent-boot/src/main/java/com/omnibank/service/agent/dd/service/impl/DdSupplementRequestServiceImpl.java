@@ -53,7 +53,7 @@ public class DdSupplementRequestServiceImpl
             if (request == null || !StringUtils.hasText(request.getDataCode())) {
                 continue;
             }
-            if (existsPending(taskId, request.getDataCode())) {
+            if (existsRecorded(taskId, request.getDataCode())) {
                 continue;
             }
             DdSupplementRequest entity = new DdSupplementRequest();
@@ -145,6 +145,10 @@ public class DdSupplementRequestServiceImpl
                 && !TaskStatus.RETURNED.name().equals(taskStatus)) {
             return;
         }
+        if (countPending(request.getTaskId()) > 0) {
+            // 仍有待补充材料，等全部完成后统一触发一次重分析，避免逐条完成反复重跑
+            return;
+        }
         Set<String> agents = StringUtils.hasText(request.getAgentCode())
                 ? Set.of(request.getAgentCode()) : Set.of();
         eventPublisher.publishEvent(new DdReanalysisRequestedEvent(
@@ -173,11 +177,14 @@ public class DdSupplementRequestServiceImpl
                 .toList();
     }
 
-    private boolean existsPending(Long taskId, String dataCode) {
+    /** 同一 dataCode 已存在待补充或已补充记录时不再重复生成，避免重分析反复催同一份材料 */
+    private boolean existsRecorded(Long taskId, String dataCode) {
         return lambdaQuery()
                 .eq(DdSupplementRequest::getTaskId, taskId)
                 .eq(DdSupplementRequest::getDataCode, dataCode)
-                .eq(DdSupplementRequest::getStatus, SupplementRequestStatus.PENDING.name())
+                .in(DdSupplementRequest::getStatus,
+                        SupplementRequestStatus.PENDING.name(),
+                        SupplementRequestStatus.COMPLETED.name())
                 .exists();
     }
 

@@ -10,7 +10,9 @@ import com.omnibank.service.agent.dd.dto.task.CreateTaskReq;
 import com.omnibank.service.agent.dd.dto.task.EnterpriseReq;
 import com.omnibank.service.agent.dd.dto.task.LoanApplicationReq;
 import com.omnibank.service.agent.dd.dto.task.TaskCreateVO;
+import com.omnibank.service.agent.dd.dto.report.ReportReviewReq;
 import com.omnibank.service.agent.dd.entity.DdDueDiligenceReport;
+import com.omnibank.service.agent.dd.enums.ReportReviewAction;
 import com.omnibank.service.agent.dd.plan.DdAgentCatalog;
 import com.omnibank.service.agent.dd.service.DdOutboxPublisher;
 import com.omnibank.service.agent.dd.service.DdReportService;
@@ -100,7 +102,7 @@ class DdComprehensiveReportAgentIntegrationTest {
     }
 
     @Test
-    void 重复生成报告按任务递增版本且历史版本不被覆盖() {
+    void 相同快照重复生成复用版本且状态变化后新增版本() {
         long taskId = submittedTask();
 
         AgentResult<DueDiligenceReportData> first = agentRuntime.execute(
@@ -109,9 +111,26 @@ class DdComprehensiveReportAgentIntegrationTest {
                 DdAgentCatalog.DUE_DILIGENCE_REPORT, taskId, null);
 
         int firstVersion = first.getData().getReportVersion();
-        int secondVersion = second.getData().getReportVersion();
-        assertThat(secondVersion).isEqualTo(firstVersion + 1);
-        assertThat(reportService.latest(taskId).getReportVersion()).isEqualTo(secondVersion);
+        // 快照与状态均未变化，直接复用当前版本，避免版本号膨胀
+        assertThat(second.getData().getReportVersion()).isEqualTo(firstVersion);
+        assertThat(reportService.latest(taskId).getReportVersion()).isEqualTo(firstVersion);
+
+        submitReview(taskId, firstVersion);
+        AgentResult<DueDiligenceReportData> third = agentRuntime.execute(
+                DdAgentCatalog.DUE_DILIGENCE_REPORT, taskId, null);
+
+        // 复核状态已变化，重新生成应新增版本且不覆盖历史版本
+        assertThat(third.getData().getReportVersion()).isEqualTo(firstVersion + 1);
+        assertThat(reportService.latest(taskId).getReportVersion()).isEqualTo(firstVersion + 1);
+        assertThat(reportService.requireReport(taskId, firstVersion).getReportStatus())
+                .isEqualTo("WAITING_FOR_REVIEW");
+    }
+
+    private void submitReview(long taskId, int reportVersion) {
+        ReportReviewReq req = new ReportReviewReq();
+        req.setActionType(ReportReviewAction.SUBMIT);
+        req.setRemark("提交复核");
+        reportService.review(taskId, reportVersion, req, "reviewer01");
     }
 
     private long submittedTask() {

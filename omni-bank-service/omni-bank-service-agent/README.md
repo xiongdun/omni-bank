@@ -51,7 +51,7 @@ mvn -ntp test -pl omni-bank-service/omni-bank-service-agent/omni-bank-service-ag
 | GET | `/v1/dd/tasks/{taskId}/findings` | 风险线索分页（agentCode / category / severity / status） |
 | GET | `/v1/dd/tasks/{taskId}/supplements` | 补充材料请求分页（agentCode / status / source） |
 | POST | `/v1/dd/tasks/{taskId}/supplements` | 手工创建补充材料请求（source=MANUAL） |
-| POST | `/v1/dd/tasks/{taskId}/supplements/{requestId}/complete` | 完成补充材料请求，触发受影响 Agent 增量重分析 |
+| POST | `/v1/dd/tasks/{taskId}/supplements/{requestId}/complete` | 完成补充材料请求，全部待补充完成后统一触发一次受影响 Agent 增量重分析 |
 | GET | `/v1/dd/tasks/{taskId}/plans/current` | 任务当前尽调计划 |
 | GET | `/v1/dd/tasks/{taskId}/plans` | 任务计划版本分页（planVersion 倒序） |
 | GET | `/v1/dd/plans/{planId}` | 计划详情（六类计划输出） |
@@ -240,11 +240,11 @@ P7 交付 Agent 11–12，仍为确定性规则引擎，`AgentResult.modelVersio
 ### 线索、补充材料与增量重分析（P9）
 
 - 线索落库：Agent 节点执行成功且返回结果时，`DdAgentExecutionServiceImpl` 在同一调用链路内把 `AgentResult.findings` 写入 `dd_finding`、`supplementRequests` 写入 `dd_supplement_request`。同一 `task_id + agent_code` 每次真正执行先逻辑删除旧线索再写入，保留当前有效结论；`finding_code` 缺失时按 `FND-{executionId}-{序号}` 生成。
-- 幂等：补充材料请求按 `task_id + data_code` 去重，已存在 `PENDING` 时跳过，重复投递事件不会重复生成。
+- 幂等：补充材料请求按 `task_id + data_code` 去重，已存在 `PENDING` 或 `COMPLETED` 时跳过，避免重分析反复催同一份材料，重复投递事件不会重复生成。
 - 查询：`GET /tasks/{taskId}/findings` 支持 Agent、分类、严重级别与状态过滤；`GET /tasks/{taskId}/supplements` 支持 Agent、状态与来源（`AGENT` / `MANUAL`）过滤。
-- 手工补充：`POST /tasks/{taskId}/supplements` 创建 `source=MANUAL` 的待补充请求；`POST /tasks/{taskId}/supplements/{requestId}/complete` 仅允许 `PENDING` 完成，写入 `remark` 与 `completed_at`，请求不存在返回 `230135`，状态不符返回 `230136`，并发冲突返回 `230103`。
+- 手工补充：`POST /tasks/{taskId}/supplements` 创建 `source=MANUAL` 的待补充请求；`POST /tasks/{taskId}/supplements/{requestId}/complete` 仅允许 `PENDING` 完成，写入 `remark` 与 `completed_at`；若仍有其它 `PENDING` 请求则不触发重分析，全部完成后统一触发一次。请求不存在返回 `230135`，状态不符返回 `230136`，并发冲突返回 `230103`。
 - 状态推进：Graph 执行完成后，存在 `PENDING` 补充请求则停在 `WAITING_FOR_SUPPLEMENT`；否则依次 `RISK_ASSESSING → REPORT_GENERATING → WAITING_FOR_REVIEW`。报告复核联动仅在任务处于 `WAITING_FOR_REVIEW` 时生效：`FINALIZE → COMPLETED`，`REJECT` / `REQUEST_MATERIAL → RETURNED`。
-- 增量重分析：补充材料完成（任务处于 `WAITING_FOR_SUPPLEMENT` / `RETURNED`）或报告 `REANALYZE` 时发布 `DdReanalysisRequestedEvent`，由 `DdPlanScheduler` 计算「受影响 Agent + 传递依赖它的下游」闭包，任务进入 `REANALYZING` 后按当前计划重跑 Graph：闭包内节点重新执行，其余复用历史 `SUCCEEDED` 结果，完成后按上述规则重新推进状态并生成新的报告版本。影响集合为空时退化为全量重跑。
+- 增量重分析：全部补充材料完成（任务处于 `WAITING_FOR_SUPPLEMENT` / `RETURNED`）或报告 `REANALYZE` 时发布 `DdReanalysisRequestedEvent`，由 `DdPlanScheduler` 计算「受影响 Agent + 传递依赖它的下游」闭包，任务进入 `REANALYZING` 后按当前计划重跑 Graph：闭包内节点重新执行，其余复用历史 `SUCCEEDED` 结果，完成后按上述规则重新推进状态并生成报告；报告标题、状态、章节内容与统计均无变化时复用当前版本，不新增版本号。影响集合为空时退化为全量重跑。
 - 计划查询：`PlanVO` 拆解 `agent_plan`、`data_plan`、`material_plan`、`dependency_plan`、`supplement_plan`、`execution_config`，其余元信息原样返回；任务无当前计划返回 `230137`。
 - 证据溯源：`GET /evidences/{evidenceId}/references` 返回引用该证据的线索、报告版本（按版本倒序）与复核留痕（按时间正序），匹配依据为 `evidenceRefs` / `evidence_ids` JSON 中的证据 ID。
 
