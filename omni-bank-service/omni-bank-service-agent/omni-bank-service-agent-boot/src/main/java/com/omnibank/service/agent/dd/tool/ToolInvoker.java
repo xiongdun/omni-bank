@@ -50,6 +50,11 @@ public class ToolInvoker {
             return audit(agentCode, toolCode, definition, request, ToolResult.failure(toolCode,
                     DdErrorCode.TOOL_PARAM_INVALID.getCode(), "工具调用缺少 taskId，无法归属任务上下文"), startNanos);
         }
+        String schemaError = ToolParamSchemas.validate(toolCode, request.params());
+        if (schemaError != null) {
+            return audit(agentCode, toolCode, definition, request, ToolResult.failure(toolCode,
+                    DdErrorCode.TOOL_PARAM_SCHEMA_INVALID.getCode(), "工具参数校验未通过：" + schemaError), startNanos);
+        }
         ToolResult<T> result;
         try {
             result = execute(tool, definition, request);

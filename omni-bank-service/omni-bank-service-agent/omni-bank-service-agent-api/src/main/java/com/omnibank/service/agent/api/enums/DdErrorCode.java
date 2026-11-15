@@ -51,7 +51,8 @@ public enum DdErrorCode implements ErrorCode {
     TOOL_PARAM_INVALID("230139", "工具调用参数不合法"),
     TOOL_TIMEOUT("230140", "工具调用超时"),
     TOOL_EXECUTION_FAILED("230141", "工具调用执行失败"),
-    TOOL_PERMISSION_DENIED("230142", "工具调用权限不足");
+    TOOL_PERMISSION_DENIED("230142", "工具调用权限不足"),
+    TOOL_PARAM_SCHEMA_INVALID("230143", "工具调用参数不符合 Schema");
 
     private final String code;
 

@@ -11,7 +11,7 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 
 /**
- * Tool 统一调用层单元测试：权限边界、参数校验、超时控制、异常隔离与结果透传。
+ * Tool 统一调用层单元测试：权限边界、参数校验、Schema 校验、超时控制、异常隔离与结果透传。
  */
 class ToolInvokerTest {
 
@@ -58,6 +58,30 @@ class ToolInvokerTest {
 
         assertThat(result.isSuccess()).isFalse();
         assertThat(result.getErrorCode()).isEqualTo(DdErrorCode.TOOL_PARAM_INVALID.getCode());
+    }
+
+    @Test
+    void 必填参数缺失返回Schema校验失败() {
+        ToolInvoker invoker = invoker(tool("report.validateReport", true, 0L,
+                request -> ToolResult.success("TEST", "ok", null, null)), "report.validateReport");
+
+        ToolResult<String> result = invoker.invoke(AGENT_CODE, "report.validateReport",
+                new ToolRequest(1L, Map.of()));
+
+        assertThat(result.isSuccess()).isFalse();
+        assertThat(result.getErrorCode()).isEqualTo(DdErrorCode.TOOL_PARAM_SCHEMA_INVALID.getCode());
+    }
+
+    @Test
+    void 参数类型不符返回Schema校验失败() {
+        ToolInvoker invoker = invoker(tool("financial.getBankStatements", true, 0L,
+                request -> ToolResult.success("TEST", "ok", null, null)), "financial.getBankStatements");
+
+        ToolResult<String> result = invoker.invoke(AGENT_CODE, "financial.getBankStatements",
+                new ToolRequest(1L, Map.of("creditCode", "91310000MA1K35Q123", "latestRevenue", "not-a-number")));
+
+        assertThat(result.isSuccess()).isFalse();
+        assertThat(result.getErrorCode()).isEqualTo(DdErrorCode.TOOL_PARAM_SCHEMA_INVALID.getCode());
     }
 
     @Test

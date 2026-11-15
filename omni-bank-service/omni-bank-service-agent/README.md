@@ -101,13 +101,13 @@ mvn -ntp test -pl omni-bank-service/omni-bank-service-agent/omni-bank-service-ag
 ### Agent 框架底座（P3）
 
 - 工具契约：`AgentTool` + `ToolDefinition` / `ToolRequest` / `ToolResult`，由 `ToolRegistry` 统一注册与查找；重复注册启动期失败，未知工具返回 `230117`。
-- 工具统一调用层 `ToolInvoker`：所有 Agent 经 `invoke(agentCode, toolCode, request)` 调用工具，统一做权限边界校验（Agent 只能调用 `AgentDefinition.requiredTools` 声明的工具，越权返回 `230142`）、`taskId` 数据域校验（缺失返回 `230139`）、真实工具超时控制（`timeoutMs`，超时返回 `230140`）、异常隔离（工具抛异常返回 `230141`）与结构化调用审计（`dd.tool.call` / `dd.tool.error`）。Mock 工具与本地规则工具同步执行以复用调用方事务。
+- 工具统一调用层 `ToolInvoker`：所有 Agent 经 `invoke(agentCode, toolCode, request)` 调用工具，统一做权限边界校验（Agent 只能调用 `AgentDefinition.requiredTools` 声明的工具，越权返回 `230142`）、`taskId` 数据域校验（缺失返回 `230139`）、业务参数 Schema 校验（`ToolParamSchemas` 声明必填与类型，不符返回 `230143`）、真实工具超时控制（`timeoutMs`，超时返回 `230140`）、异常隔离（工具抛异常返回 `230141`）与结构化调用审计（`dd.tool.call` / `dd.tool.error`）。Mock 工具与本地规则工具同步执行以复用调用方事务。
 - 已注册工具：
   - `enterprise.queryEnterprise`（QUERY，Mock）：读取证据中心已采集的工商证据，结果带 mock 标记与证据 ID。
   - `enterprise.verifyCreditCode`（RULE，非 Mock）：按 GB 32100-2015 校验统一社会信用代码长度、字符集与校验位。
 - Agent 契约沿用 `CreditAgent` / `AgentDefinition` / `AgentContext` / `AgentResult`；`AgentRegistry` 负责注册，`AgentContextBuilder` 装配证据引用与工具清单，`AgentRuntime` 负责执行与结果兜底。
 - 已实现 Agent 01 `SUBJECT_VERIFICATION`：规则校验主体身份与申报/登记一致性，输出 Finding、DataGap、SupplementRequest 与 EvidenceRef；Mock 模式下自动附加告警。
-- 当前未暴露 Agent 执行 HTTP 接口，后续由 Planner/Graph 异步调度；工具调用已按 `requiredTools` 做 Agent→Tool 白名单校验，业务参数 Schema 校验尚未实现。
+- 当前未暴露 Agent 执行 HTTP 接口，后续由 Planner/Graph 异步调度；工具调用已按 `requiredTools` 做 Agent→Tool 白名单校验，并按 `ToolParamSchemas` 做业务参数 Schema 校验。
 
 ### Prompt Manager（P4）
 
@@ -300,6 +300,7 @@ P7 交付 Agent 11–12，仍为确定性规则引擎，`AgentResult.modelVersio
 | 230140 | 工具调用超时 |
 | 230141 | 工具调用执行失败 |
 | 230142 | 工具调用权限不足 |
+| 230143 | 工具调用参数不符合 Schema |
 
 ## 3. 数据库说明
 
@@ -375,4 +376,3 @@ mvn -pl ...-agent-boot -am test      BUILD SUCCESS
 11. **SSE 多实例不互通**：内存注册表仅适用于单实例，水平扩展需引入 Redis Pub/Sub。
 12. **H2 测试 DDL 与 MySQL DDL 双份维护**：`src/test/resources/dd-schema-h2.sql` 需随 `docs/sql/omni_bank_dd.sql` 同步。
 13. **待确认字段**：`current_plan_id` 已由 P4 Planner 维护（指向 `dd_plan` 最新版本），`analysis_version` 的推进规则、`dd_evidence` 的证据类型/来源类型枚举扩展仍待后续阶段规格明确。
-14. **工具层剩余能力**：`ToolInvoker` 已交付 Agent→Tool 权限边界、taskId 校验、超时控制、异常隔离与调用审计；业务参数 Schema 校验尚未实现。
